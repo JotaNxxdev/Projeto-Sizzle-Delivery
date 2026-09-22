@@ -58,8 +58,14 @@ configure o Supabase (próxima seção).
    inicial (os mesmos restaurantes do protótipo).
 3. Em **Project Settings > API**, copie:
    - **Project URL**
-   - a chave em **Project API keys > service_role** (⚠️ é uma chave
-     poderosa — nunca a exponha no navegador nem a commite no Git)
+   - a chave privilegiada de servidor (⚠️ é uma chave poderosa — nunca a
+     exponha no navegador nem a commite no Git). O nome dela depende de
+     quando seu projeto foi criado:
+     - Projetos novos: seção **Secret keys**, chave `sb_secret_...`
+     - Projetos antigos: seção **Project API keys**, chave `service_role`
+       (formato JWT, começa com `eyJ...`)
+     - Em ambos os casos, **não** use a "Publishable key" / `anon` — essa é
+       para uso no navegador, não serve pra isso.
 4. Copie `.env.local.example` para `.env.local` e preencha:
    ```
    SUPABASE_URL=https://SEU-PROJETO.supabase.co
