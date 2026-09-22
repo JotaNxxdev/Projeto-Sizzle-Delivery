@@ -34,6 +34,56 @@ export async function updateOrderStatusAsOwner(formData: FormData) {
   revalidatePath('/restaurant');
 }
 
+export async function updateRestaurantSettings(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const name = String(formData.get('name') || '').trim();
+  const category = String(formData.get('category') || '').trim();
+  const deliveryTime = String(formData.get('deliveryTime') || '').trim();
+  const deliveryFee = Number(formData.get('deliveryFee') || 0);
+  const brandColor = String(formData.get('brandColor') || '').trim() || null;
+  const description = String(formData.get('description') || '').trim() || null;
+
+  if (!name || !category || !deliveryTime || !(deliveryFee >= 0)) {
+    fail('/restaurant/settings', 'Nome, categoria, tempo de entrega e taxa são obrigatórios.');
+  }
+
+  const updates: {
+    name: string;
+    category: string;
+    delivery_time: string;
+    delivery_fee: number;
+    brand_color: string | null;
+    description: string | null;
+    image_url?: string;
+  } = {
+    name,
+    category,
+    delivery_time: deliveryTime,
+    delivery_fee: deliveryFee,
+    brand_color: brandColor,
+    description,
+  };
+
+  // Só troca a foto se veio uma nova (o formulário só manda este campo
+  // quando o dono escolhe um arquivo novo).
+  const imageUrl = formData.get('imageUrl');
+  if (imageUrl !== null && String(imageUrl).trim()) {
+    updates.image_url = String(imageUrl).trim();
+  }
+
+  const { error } = await db.from('restaurants').update(updates).eq('id', restaurantId);
+  if (error) {
+    console.error('[Sizzle] Erro ao atualizar loja:', error.message);
+    fail('/restaurant/settings', 'Não foi possível salvar as informações da loja.');
+  }
+
+  revalidatePath('/restaurant/settings');
+  revalidatePath('/');
+  revalidatePath(`/restaurants/${restaurantId}`);
+}
+
 export async function createMenuItem(formData: FormData) {
   const restaurantId = String(formData.get('restaurantId') || '');
   const db = await requireOwnerOf(restaurantId);

@@ -46,6 +46,43 @@ export async function getOrdersForRestaurant(restaurantId: string): Promise<Owne
   }));
 }
 
+export interface RestaurantSettings {
+  id: string;
+  name: string;
+  category: string;
+  deliveryTime: string;
+  deliveryFee: number;
+  imageUrl: string | null;
+  brandColor: string | null;
+  description: string | null;
+}
+
+export async function getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id, name, category, delivery_time, delivery_fee, image_url, brand_color, description')
+    .eq('id', restaurantId)
+    .single();
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao buscar dados da loja:', error?.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    category: data.category,
+    deliveryTime: data.delivery_time,
+    deliveryFee: Number(data.delivery_fee),
+    imageUrl: data.image_url,
+    brandColor: data.brand_color,
+    description: data.description,
+  };
+}
+
 export interface OwnerMenuItem {
   id: string;
   name: string;

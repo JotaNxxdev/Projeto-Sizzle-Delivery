@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
-import { getDeviceId } from '@/lib/device';
 import { formatCurrency } from '@/lib/format';
 import type { Order } from '@/lib/types';
 
@@ -21,8 +20,7 @@ export default function OrdersPage() {
 
     async function loadOrders() {
       try {
-        const deviceId = getDeviceId();
-        const response = await fetch(`/api/orders?deviceId=${encodeURIComponent(deviceId)}`);
+        const response = await fetch('/api/orders');
         const body = await response.json();
         if (cancelled) return;
 

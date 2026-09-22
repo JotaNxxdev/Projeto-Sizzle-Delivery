@@ -39,6 +39,8 @@ export interface CurrentProfile {
   id: string;
   email: string;
   fullName: string | null;
+  phone: string | null;
+  avatarUrl: string | null;
   role: UserRole;
   restaurantId: string | null;
 }
@@ -49,7 +51,7 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
 
   const { data, error } = await db
     .from('profiles')
-    .select('id, email, full_name, role, restaurant_id')
+    .select('id, email, full_name, phone, avatar_url, role, restaurant_id')
     .eq('id', user.id)
     .single();
 
@@ -62,6 +64,8 @@ export async function getCurrentProfile(): Promise<CurrentProfile | null> {
     id: data.id,
     email: data.email,
     fullName: data.full_name,
+    phone: data.phone,
+    avatarUrl: data.avatar_url,
     role: data.role as UserRole,
     restaurantId: data.restaurant_id,
   };

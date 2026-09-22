@@ -18,6 +18,8 @@ interface RestaurantRow {
   delivery_time: string;
   delivery_fee: number;
   image_url: string | null;
+  brand_color: string | null;
+  description: string | null;
   menu_items: MenuItemRow[] | null;
 }
 
@@ -30,6 +32,8 @@ function mapRestaurant(row: RestaurantRow): Restaurant {
     deliveryTime: row.delivery_time,
     deliveryFee: Number(row.delivery_fee),
     image: row.image_url ?? '',
+    brandColor: row.brand_color,
+    description: row.description,
     menu: (row.menu_items ?? []).map((item) => ({
       id: item.id,
       name: item.name,
@@ -48,7 +52,7 @@ export async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, rating, delivery_time, delivery_fee, image_url, menu_items(id, name, description, price, image_url)'
+      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, menu_items(id, name, description, price, image_url)'
     )
     .order('name', { ascending: true });
 

@@ -9,7 +9,6 @@ interface IncomingItem {
 }
 
 interface CreateOrderBody {
-  deviceId?: string;
   restaurantId?: string;
   items?: IncomingItem[];
   notes?: string;
@@ -25,14 +24,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Fazer pedido exige conta — é o que liga o pedido para sempre a quem o fez,
+  // em vez de um ID solto no navegador que some se o cache for limpo.
+  const profile = await getCurrentProfile();
+  if (!profile) {
+    return NextResponse.json({ error: 'Você precisa estar logado para finalizar um pedido.' }, { status: 401 });
+  }
+
   const body = (await request.json().catch(() => null)) as CreateOrderBody | null;
   if (!body) {
     return NextResponse.json({ error: 'Corpo da requisição inválido.' }, { status: 400 });
   }
 
-  const { deviceId, restaurantId, items, notes, contact, address } = body;
+  const { restaurantId, items, notes, contact, address } = body;
 
-  if (!deviceId || !restaurantId || !Array.isArray(items) || items.length === 0) {
+  if (!restaurantId || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Dados do pedido incompletos.' }, { status: 400 });
   }
   if (!contact?.trim() || !address?.trim()) {
@@ -67,10 +73,6 @@ export async function POST(request: NextRequest) {
   const total = subtotal + deliveryFee;
   const orderCode = `PED-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
 
-  // Se a pessoa estiver logada, liga o pedido à conta dela também — assim ele
-  // aparece em "Meus Pedidos" em qualquer aparelho, não só neste navegador.
-  const profile = await getCurrentProfile();
-
   const { data: orderRow, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -84,8 +86,7 @@ export async function POST(request: NextRequest) {
       subtotal,
       delivery_fee: deliveryFee,
       total,
-      device_id: deviceId,
-      user_id: profile?.id ?? null,
+      user_id: profile.id,
     })
     .select()
     .single();
@@ -113,30 +114,23 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ orderCode }, { status: 201 });
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   if (!isSupabaseConfigured || !supabase) {
     return NextResponse.json({ orders: [] });
   }
 
-  const deviceId = request.nextUrl.searchParams.get('deviceId');
   const profile = await getCurrentProfile();
-
-  if (!profile && !deviceId) {
-    return NextResponse.json({ error: 'deviceId é obrigatório.' }, { status: 400 });
+  if (!profile) {
+    return NextResponse.json({ error: 'Você precisa estar logado para ver seus pedidos.' }, { status: 401 });
   }
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('orders')
     .select(
       'order_code, restaurant_name, notes, contact_number, delivery_address, status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
     )
+    .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
-
-  // Logado: mostra os pedidos da conta (feitos de qualquer aparelho).
-  // Visitante: mostra só os pedidos feitos neste navegador.
-  query = profile ? query.eq('user_id', profile.id) : query.eq('device_id', deviceId as string);
-
-  const { data, error } = await query;
 
   if (error) {
     console.error('[Sizzle] Erro ao buscar pedidos:', error.message);

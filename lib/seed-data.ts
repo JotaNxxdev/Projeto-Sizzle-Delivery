@@ -11,6 +11,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     deliveryTime: '20-30 min',
     deliveryFee: 5.0,
     image: '/unnamed.png',
+    brandColor: null,
+    description: null,
     menu: [
       {
         id: 'seed-1-1',
@@ -36,6 +38,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     deliveryTime: '15-25 min',
     deliveryFee: 0.0,
     image: '/express.png',
+    brandColor: null,
+    description: null,
     menu: [
       {
         id: 'seed-2-1',
@@ -61,6 +65,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     deliveryTime: '35-45 min',
     deliveryFee: 8.0,
     image: '/kori.png',
+    brandColor: null,
+    description: null,
     menu: [
       {
         id: 'seed-3-1',
@@ -86,6 +92,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     deliveryTime: '35-45 min',
     deliveryFee: 15.0,
     image: '/unnamed (1).png',
+    brandColor: null,
+    description: null,
     menu: [
       {
         id: 'seed-4-1',
