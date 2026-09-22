@@ -15,11 +15,17 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="screen">
-      <header className="app-header-menu">
+      <header
+        className="app-header-menu"
+        style={restaurant.brandColor ? { borderBottom: `4px solid ${restaurant.brandColor}` } : undefined}
+      >
         <BackButton />
         <h1>{restaurant.name}</h1>
       </header>
       <main className="app-main-menu">
+        {restaurant.description && (
+          <p style={{ color: '#666', marginTop: 0, marginBottom: 20 }}>{restaurant.description}</p>
+        )}
         <MenuClient restaurant={restaurant} />
       </main>
     </div>

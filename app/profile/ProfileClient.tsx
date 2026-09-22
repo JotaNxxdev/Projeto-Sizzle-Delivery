@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SignOutButton from '@/components/SignOutButton';
+import { updateMyProfile } from './actions';
 import type { CurrentProfile } from '@/lib/auth';
-
-const NAME_KEY = 'sizzle_profile_name';
-const PHONE_KEY = 'sizzle_profile_phone';
-const IMAGE_KEY = 'sizzle_profile_image';
 
 const ROLE_LABEL: Record<CurrentProfile['role'], string> = {
   customer: 'Cliente',
@@ -15,22 +13,16 @@ const ROLE_LABEL: Record<CurrentProfile['role'], string> = {
   admin: 'Administrador',
 };
 
-export default function ProfileClient({ profile }: { profile: CurrentProfile | null }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [image, setImage] = useState('/default-user.svg');
+export default function ProfileClient({ profile }: { profile: CurrentProfile }) {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    // localStorage não existe no servidor, então a leitura só pode
-    // acontecer depois da montagem no cliente — é isso que este efeito faz.
-    /* eslint-disable react-hooks/set-state-in-effect */
-    setName(localStorage.getItem(NAME_KEY) ?? profile?.fullName ?? '');
-    setPhone(localStorage.getItem(PHONE_KEY) ?? '');
-    const savedImage = localStorage.getItem(IMAGE_KEY);
-    if (savedImage) setImage(savedImage);
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [profile]);
+  const [name, setName] = useState(profile.fullName ?? '');
+  const [phone, setPhone] = useState(profile.phone ?? '');
+  const [avatarPreview, setAvatarPreview] = useState(profile.avatarUrl ?? '/default-user.svg');
+  const [newAvatar, setNewAvatar] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -39,10 +31,31 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile | n
     const reader = new FileReader();
     reader.onload = (loadEvent) => {
       const result = loadEvent.target?.result as string;
-      setImage(result);
-      localStorage.setItem(IMAGE_KEY, result);
+      setAvatarPreview(result);
+      setNewAvatar(result);
     };
     reader.readAsDataURL(file);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const formData = new FormData();
+      formData.set('fullName', name);
+      formData.set('phone', phone);
+      if (newAvatar) formData.set('avatarUrl', newAvatar);
+
+      await updateMyProfile(formData);
+      setNewAvatar(null);
+      setSaved(true);
+      router.refresh();
+    } catch (err) {
+      console.error('[Sizzle] Erro ao salvar perfil:', err);
+      alert('Não foi possível salvar seu perfil. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -54,26 +67,32 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile | n
       </header>
 
       <main className="profile-content">
-        {profile ? (
-          <div className="user-input-group" style={{ textAlign: 'center' }}>
-            <p style={{ margin: 0 }}>
-              Logado como <strong>{profile.email}</strong>
-            </p>
-            <p style={{ margin: '4px 0 12px', color: '#666' }}>{ROLE_LABEL[profile.role]}</p>
-            <SignOutButton className="checkout-button" />
-          </div>
-        ) : (
-          <div className="user-input-group" style={{ textAlign: 'center' }}>
-            <p style={{ margin: '0 0 12px' }}>Você não está logado.</p>
-            <Link href="/login" className="checkout-button" style={{ display: 'block', textDecoration: 'none' }}>
-              Entrar
-            </Link>
+        <div className="user-input-group" style={{ textAlign: 'center' }}>
+          <p style={{ margin: 0 }}>
+            Logado como <strong>{profile.email}</strong>
+          </p>
+          <p style={{ margin: '4px 0 12px', color: '#666' }}>{ROLE_LABEL[profile.role]}</p>
+          <SignOutButton className="checkout-button" />
+        </div>
+
+        {(profile.role === 'admin' || profile.role === 'restaurant_owner') && (
+          <div className="user-input-group" style={{ width: '100%', maxWidth: 400 }}>
+            {profile.role === 'admin' && (
+              <Link href="/admin" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0, marginBottom: 10 }}>
+                Ir para o Painel do Administrador
+              </Link>
+            )}
+            {profile.role === 'restaurant_owner' && (
+              <Link href="/restaurant" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}>
+                Ir para o Painel do Restaurante
+              </Link>
+            )}
           </div>
         )}
 
         <div className="profile-info">
           <div className="profile-picture-container">
-            <img src={image} alt="Foto de perfil" className="profile-picture" />
+            <img src={avatarPreview} alt="Foto de perfil" className="profile-picture" />
             <button
               type="button"
               className="upload-button"
@@ -99,7 +118,6 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile | n
               placeholder="Seu nome"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              onBlur={() => localStorage.setItem(NAME_KEY, name)}
             />
           </div>
           <div className="user-input-group">
@@ -110,25 +128,17 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile | n
               placeholder="(00) 00000-0000"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              onBlur={() => localStorage.setItem(PHONE_KEY, phone)}
             />
           </div>
+          <button type="button" className="checkout-button" onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar alterações'}
+          </button>
         </div>
 
         <ul className="profile-menu">
           <li>
             <a href="/orders">Histórico de Pedidos</a>
           </li>
-          {profile?.role === 'restaurant_owner' && (
-            <li>
-              <a href="/restaurant">Painel do Restaurante</a>
-            </li>
-          )}
-          {profile?.role === 'admin' && (
-            <li>
-              <a href="/admin">Painel do Administrador</a>
-            </li>
-          )}
           <li>
             <a href="#">Meus Endereços</a>
           </li>

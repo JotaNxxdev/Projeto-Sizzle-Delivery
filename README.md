@@ -83,11 +83,14 @@ configure o Supabase (próxima seção).
 
 ## Login e papéis (cliente / dono de restaurante / administrador)
 
-1. Depois de rodar `supabase/schema.sql`, rode também
-   [`supabase/migrations/002_auth_and_roles.sql`](./supabase/migrations/002_auth_and_roles.sql)
-   no SQL Editor do Supabase — cria a tabela `profiles` (com o papel de
-   cada usuário) e liga `restaurants`/`orders` à conta de quem é dono/fez
-   o pedido.
+1. Depois de rodar `supabase/schema.sql`, rode também, nessa ordem, no
+   SQL Editor do Supabase:
+   - [`supabase/migrations/002_auth_and_roles.sql`](./supabase/migrations/002_auth_and_roles.sql)
+     — cria a tabela `profiles` (com o papel de cada usuário) e liga
+     `restaurants`/`orders` à conta de quem é dono/fez o pedido.
+   - [`supabase/migrations/003_profile_and_restaurant_settings.sql`](./supabase/migrations/003_profile_and_restaurant_settings.sql)
+     — adiciona telefone/foto ao perfil, cor/descrição à loja, e torna
+     pedido sem conta (visitante) uma coisa só do histórico.
 2. Em **Project Settings > API**, copie a **Publishable key**
    (`sb_publishable_...` em projetos novos, ou a chave `anon` em projetos
    antigos) e preencha `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no
@@ -103,15 +106,25 @@ configure o Supabase (próxima seção).
 4. Logado como administrador, acesse **`/admin`** para: cadastrar
    restaurantes, atribuir um dono a cada um (pelo e-mail da conta dele —
    a pessoa precisa ter se cadastrado antes em `/signup`), ver todos os
-   pedidos do sistema e mudar o papel de qualquer usuário.
+   pedidos do sistema e mudar o papel de qualquer usuário. É essa troca
+   de papel em **Usuários** que decide o que aparece pra cada pessoa na
+   tela de Perfil dela (o botão "Ir para o Painel..." correspondente).
 5. Quem é dono de restaurante acessa **`/restaurant`** para ver e
-   atualizar o status dos pedidos do próprio restaurante, e gerenciar o
-   cardápio (criar/editar/excluir itens).
-6. Rotas `/admin` e `/restaurant` são protegidas por `proxy.ts`
-   (middleware): sem login, redireciona pra `/login`; a checagem de papel
-   (é admin? é dono deste restaurante?) acontece de novo em cada página e
-   em cada Server Action, então mesmo alguém adulterando uma requisição
-   não consegue agir fora do que o papel permite.
+   atualizar o status dos pedidos do próprio restaurante, gerenciar o
+   cardápio (criar/editar/excluir itens) e editar a própria loja em
+   **`/restaurant/settings`** (foto, cor, categoria, descrição, tempo e
+   taxa de entrega).
+6. Rotas `/admin`, `/restaurant`, `/checkout`, `/orders` e `/profile` são
+   protegidas por `proxy.ts` (middleware): sem login, redireciona pra
+   `/login`; a checagem de papel/dono (é admin? é dono deste restaurante?
+   é o próprio pedido?) acontece de novo em cada página e em cada Server
+   Action, então mesmo alguém adulterando uma requisição não consegue
+   agir fora do que o papel permite.
+7. **Fazer pedido exige login** — navegar pelo cardápio e montar o
+   carrinho continua livre para qualquer visitante, mas ao clicar em
+   "Finalizar Pedido" a pessoa é levada para `/login` se ainda não tiver
+   conta (o carrinho é mantido, feito no navegador, e continua intacto
+   depois do login).
 
 ### Limitações atuais (próximos passos possíveis)
 
@@ -122,9 +135,10 @@ configure o Supabase (próxima seção).
 - Não há recuperação de senha "esqueci minha senha" nas telas — o
   Supabase Auth já suporta isso, só falta a tela; por enquanto pode ser
   feito manualmente pelo painel do Supabase (Authentication > Users).
-- Pedidos feitos como visitante (sem login) continuam funcionando como
-  antes, identificados por um ID salvo no navegador; ao logar, os pedidos
-  novos passam a ficar ligados à conta.
+- Fotos de perfil e de loja são guardadas como imagem embutida
+  (base64) direto numa coluna do banco — funciona bem na escala atual,
+  mas pra um catálogo grande de fotos o passo natural é migrar pro
+  Supabase Storage (também tem plano gratuito).
 
 ## Deploy na Vercel
 
@@ -144,26 +158,27 @@ app/                     rotas (App Router)
   HomeClient.tsx           → busca/categorias/carrossel (interativo)
   restaurants/[id]/        → cardápio de um restaurante
   cart/                    → carrinho
-  checkout/                → formulário de finalização
-  orders/                  → histórico de pedidos (busca via API)
-  profile/                 → estado de login + perfil local (nome/telefone/foto)
+  checkout/                → formulário de finalização (exige login)
+  orders/                  → histórico de pedidos (exige login)
+  profile/                 → perfil salvo no banco (nome/telefone/foto) + atalhos de painel
   login/, signup/          → autenticação (Supabase Auth)
   admin/                   → painel do administrador (restaurantes, pedidos, usuários)
-  restaurant/              → painel do dono de restaurante (pedidos, cardápio)
-  api/orders/route.ts      → cria e lista pedidos (valida e recalcula preços)
+  restaurant/              → painel do dono de restaurante (pedidos, cardápio, loja)
+  api/orders/route.ts      → cria e lista pedidos (exige login, recalcula preços)
 components/               BackButton, BottomNav, SignOutButton
 contexts/CartContext.tsx  estado do carrinho (persistido em localStorage)
-proxy.ts                  protege /admin e /restaurant, renova a sessão de login
+proxy.ts                  protege rotas que exigem login, renova a sessão
 lib/
   supabase.ts              cliente Supabase (server-only, service_role key)
   supabase-auth-browser.ts cliente de login para uso no navegador
   auth.ts                  lê a sessão/papel do usuário atual (server-only)
   restaurants.ts           leitura de restaurantes (Supabase ou seed)
   admin-data.ts            consultas usadas pelo painel do administrador
-  restaurant-data.ts       consultas usadas pelo painel do dono de restaurante
+  restaurant-data.ts       consultas/edição usadas pelo painel do dono de restaurante
   seed-data.ts             dados de exemplo/fallback
-  types.ts, format.ts, device.ts
+  types.ts, format.ts
 supabase/
-  schema.sql                        schema principal + RLS + dados iniciais
-  migrations/002_auth_and_roles.sql login, papéis e vínculos de dono
+  schema.sql                                  schema principal + RLS + dados iniciais
+  migrations/002_auth_and_roles.sql            login, papéis e vínculos de dono
+  migrations/003_profile_and_restaurant_settings.sql  perfil e loja editáveis
 ```

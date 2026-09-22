@@ -34,6 +34,7 @@ export default async function RestaurantOwnerLayout({ children }: { children: Re
       <nav className="admin-tabs">
         <Link href="/restaurant">Pedidos</Link>
         <Link href="/restaurant/menu">Cardápio</Link>
+        <Link href="/restaurant/settings">Loja</Link>
       </nav>
       <main className="app-main-menu">{children}</main>
     </div>
