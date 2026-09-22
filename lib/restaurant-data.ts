@@ -7,6 +7,7 @@ export interface OwnerOrderRow {
   address: string;
   notes: string | null;
   status: string;
+  paymentStatus: string;
   total: number;
   createdAt: string;
   items: { name: string; price: number; quantity: number }[];
@@ -18,7 +19,7 @@ export async function getOrdersForRestaurant(restaurantId: string): Promise<Owne
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_code, contact_number, delivery_address, notes, status, total, created_at, order_items(menu_item_name, price, quantity)'
+      'id, order_code, contact_number, delivery_address, notes, status, payment_status, total, created_at, order_items(menu_item_name, price, quantity)'
     )
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
@@ -36,6 +37,7 @@ export async function getOrdersForRestaurant(restaurantId: string): Promise<Owne
     address: o.delivery_address,
     notes: o.notes,
     status: o.status,
+    paymentStatus: o.payment_status,
     total: Number(o.total),
     createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
     items: (o.order_items ?? []).map((item) => ({

@@ -1,8 +1,17 @@
 import { getCurrentProfile } from '@/lib/auth';
 import { getOrdersForRestaurant } from '@/lib/restaurant-data';
 import { updateOrderStatusAsOwner } from './actions';
-import { ORDER_STATUSES } from '@/lib/types';
+import { ORDER_STATUSES, PAYMENT_STATUS_LABEL, type PaymentStatus } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+
+const PAYMENT_STATUS_CLASS: Record<string, string> = {
+  pending: 'pending',
+  in_process: 'pending',
+  approved: 'delivered',
+  rejected: 'cancelled',
+  cancelled: 'cancelled',
+  refunded: 'cancelled',
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -30,9 +39,14 @@ export default async function RestaurantOrdersPage({
           <div className="order-item" key={order.id}>
             <div className="order-header">
               <h4>Pedido #{order.orderCode}</h4>
-              <span>{order.createdAt}</span>
+              <span className={`order-status ${PAYMENT_STATUS_CLASS[order.paymentStatus] ?? 'pending'}`}>
+                {PAYMENT_STATUS_LABEL[order.paymentStatus as PaymentStatus] ?? order.paymentStatus}
+              </span>
             </div>
             <div className="order-details">
+              <p>
+                <strong>Recebido em:</strong> {order.createdAt}
+              </p>
               <p>
                 <strong>Contato:</strong> {order.contact}
               </p>

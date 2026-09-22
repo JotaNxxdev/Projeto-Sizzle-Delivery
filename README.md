@@ -126,6 +126,44 @@ configure o Supabase (próxima seção).
    conta (o carrinho é mantido, feito no navegador, e continua intacto
    depois do login).
 
+## Pagamento com Pix (Mercado Pago, gratuito)
+
+Sem custo de mensalidade ou de setup — o Mercado Pago só desconta uma
+porcentagem pequena quando um pagamento é concluído de verdade (não é
+cobrado nada em modo de teste).
+
+1. Crie uma conta em https://www.mercadopago.com.br (pode ser conta
+   pessoal pra começar).
+2. Acesse https://www.mercadopago.com.br/developers/panel/app, crie uma
+   aplicação (qualquer nome).
+3. Nessa aplicação, vá em **Credenciais de teste** e copie o **Access
+   Token** (começa com `TEST-`) — é o que usamos pra testar sem
+   movimentar dinheiro de verdade.
+4. Adicione no `.env.local` (e depois nas variáveis de ambiente da
+   Vercel, marcando Production/Preview/Development):
+   ```
+   MERCADOPAGO_ACCESS_TOKEN=TEST-sua-access-token-aqui
+   ```
+5. Rode [`supabase/migrations/004_pix_payments.sql`](./supabase/migrations/004_pix_payments.sql)
+   no SQL Editor do Supabase — adiciona as colunas de status de
+   pagamento nos pedidos.
+6. Reinicie/redeploy. Ao clicar em "Confirmar Pedido", em vez de ir
+   direto pra tela de pedidos, o cliente vê um QR Code Pix (e o código
+   "copia e cola") pra pagar. A tela atualiza sozinha assim que o
+   pagamento é aprovado.
+7. Pra testar sem pagar de verdade: use as [contas e cartões de teste do
+   Mercado Pago](https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/test/accounts) —
+   com um usuário de teste comprador, o Pix simulado é aprovado
+   automaticamente em poucos segundos.
+8. Quando estiver pronto pra receber pagamentos de verdade, troque
+   `MERCADOPAGO_ACCESS_TOKEN` pela credencial de **produção** (mesma
+   tela, tem sua própria seção) — nenhuma outra mudança de código é
+   necessária.
+
+Sem essa variável configurada, o app continua funcionando exatamente
+como antes: o pedido é criado normalmente e o pagamento é combinado por
+fora.
+
 ### Limitações atuais (próximos passos possíveis)
 
 - Cadastro de dono de restaurante é sempre feito em duas etapas: a
@@ -139,15 +177,20 @@ configure o Supabase (próxima seção).
   (base64) direto numa coluna do banco — funciona bem na escala atual,
   mas pra um catálogo grande de fotos o passo natural é migrar pro
   Supabase Storage (também tem plano gratuito).
+- Pix não pago expira sozinho (o Mercado Pago cancela automaticamente
+  depois de um tempo), mas ainda não existe uma limpeza automática que
+  cancele o *pedido* correspondente — hoje ele só fica visível como
+  "Aguardando pagamento" indefinidamente na lista.
 
 ## Deploy na Vercel
 
 1. Faça push deste repositório para o GitHub (branch já configurada).
 2. Importe o projeto em https://vercel.com/new.
-3. Em **Environment Variables**, adicione as quatro variáveis do
-   `.env.local` (marcando Production, Preview e Development):
-   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`
-   e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. Em **Environment Variables**, adicione as variáveis do `.env.local`
+   (marcando Production, Preview e Development): `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e, se for usar Pix,
+   `MERCADOPAGO_ACCESS_TOKEN`.
 4. Deploy. O build usa `next build` automaticamente.
 
 ## Estrutura do projeto
@@ -158,13 +201,15 @@ app/                     rotas (App Router)
   HomeClient.tsx           → busca/categorias/carrossel (interativo)
   restaurants/[id]/        → cardápio de um restaurante
   cart/                    → carrinho
-  checkout/                → formulário de finalização (exige login)
+  checkout/                → formulário de finalização (exige login) + PixPayment.tsx (QR Code)
   orders/                  → histórico de pedidos (exige login)
   profile/                 → perfil salvo no banco (nome/telefone/foto) + atalhos de painel
   login/, signup/          → autenticação (Supabase Auth)
   admin/                   → painel do administrador (restaurantes, pedidos, usuários)
   restaurant/              → painel do dono de restaurante (pedidos, cardápio, loja)
-  api/orders/route.ts      → cria e lista pedidos (exige login, recalcula preços)
+  api/orders/route.ts      → cria e lista pedidos (exige login, recalcula preços, gera Pix)
+  api/orders/[code]/payment-status/  → consultado pela tela de Pix enquanto aguarda pagamento
+  api/webhooks/mercadopago/          → recebe avisos de pagamento do Mercado Pago
 components/               BackButton, BottomNav, SignOutButton
 contexts/CartContext.tsx  estado do carrinho (persistido em localStorage)
 proxy.ts                  protege rotas que exigem login, renova a sessão
@@ -172,6 +217,7 @@ lib/
   supabase.ts              cliente Supabase (server-only, service_role key)
   supabase-auth-browser.ts cliente de login para uso no navegador
   auth.ts                  lê a sessão/papel do usuário atual (server-only)
+  mercadopago.ts           cria e consulta pagamentos Pix (server-only)
   restaurants.ts           leitura de restaurantes (Supabase ou seed)
   admin-data.ts            consultas usadas pelo painel do administrador
   restaurant-data.ts       consultas/edição usadas pelo painel do dono de restaurante
@@ -181,4 +227,5 @@ supabase/
   schema.sql                                  schema principal + RLS + dados iniciais
   migrations/002_auth_and_roles.sql            login, papéis e vínculos de dono
   migrations/003_profile_and_restaurant_settings.sql  perfil e loja editáveis
+  migrations/004_pix_payments.sql              status de pagamento Pix nos pedidos
 ```

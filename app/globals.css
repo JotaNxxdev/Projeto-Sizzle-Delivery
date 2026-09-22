@@ -572,6 +572,10 @@ h2 {
     background-color: #43B55C; /* Verde */
 }
 
+.order-status.cancelled {
+    background-color: #F26666; /* Vermelho */
+}
+
 .order-details p {
     margin: 5px 0;
     font-size: 0.9rem;
