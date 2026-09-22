@@ -705,3 +705,74 @@ h2 {
     color: #999;
     padding: 20px 0;
 }
+
+/* Painéis de administrador / dono de restaurante */
+.admin-tabs {
+    display: flex;
+    gap: 20px;
+    padding: 0 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.admin-tabs a {
+    display: block;
+    padding: 12px 0;
+    color: #666;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 3px solid transparent;
+}
+
+.admin-tabs a:hover {
+    color: #43B55C;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.admin-table th,
+.admin-table td {
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.admin-table th {
+    background-color: #f9f9f9;
+    font-weight: 700;
+    color: #333;
+}
+
+.admin-inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.admin-inline-form input,
+.admin-inline-form select {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.admin-btn {
+    width: auto;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}

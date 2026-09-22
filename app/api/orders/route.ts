@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getRestaurantById } from '@/lib/restaurants';
+import { getCurrentProfile } from '@/lib/auth';
 
 interface IncomingItem {
   menuItemId: string;
@@ -66,6 +67,10 @@ export async function POST(request: NextRequest) {
   const total = subtotal + deliveryFee;
   const orderCode = `PED-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
 
+  // Se a pessoa estiver logada, liga o pedido à conta dela também — assim ele
+  // aparece em "Meus Pedidos" em qualquer aparelho, não só neste navegador.
+  const profile = await getCurrentProfile();
+
   const { data: orderRow, error: orderError } = await supabase
     .from('orders')
     .insert({
@@ -80,6 +85,7 @@ export async function POST(request: NextRequest) {
       delivery_fee: deliveryFee,
       total,
       device_id: deviceId,
+      user_id: profile?.id ?? null,
     })
     .select()
     .single();
@@ -113,17 +119,24 @@ export async function GET(request: NextRequest) {
   }
 
   const deviceId = request.nextUrl.searchParams.get('deviceId');
-  if (!deviceId) {
+  const profile = await getCurrentProfile();
+
+  if (!profile && !deviceId) {
     return NextResponse.json({ error: 'deviceId é obrigatório.' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('orders')
     .select(
       'order_code, restaurant_name, notes, contact_number, delivery_address, status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
     )
-    .eq('device_id', deviceId)
     .order('created_at', { ascending: false });
+
+  // Logado: mostra os pedidos da conta (feitos de qualquer aparelho).
+  // Visitante: mostra só os pedidos feitos neste navegador.
+  query = profile ? query.eq('user_id', profile.id) : query.eq('device_id', deviceId as string);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[Sizzle] Erro ao buscar pedidos:', error.message);

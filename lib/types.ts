@@ -36,6 +36,8 @@ export interface OrderItem {
 
 export type OrderStatus = 'Pendente' | 'Em Preparação' | 'Entregue';
 
+export const ORDER_STATUSES: OrderStatus[] = ['Pendente', 'Em Preparação', 'Entregue'];
+
 export interface Order {
   id: string;
   restaurantName: string;
