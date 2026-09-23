@@ -19,6 +19,7 @@ export default async function AdminRestaurantsPage({
       {restaurants.length === 0 ? (
         <p className="empty-state">Nenhum restaurante cadastrado ainda.</p>
       ) : (
+        <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
             <tr>
@@ -57,6 +58,7 @@ export default async function AdminRestaurantsPage({
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <h2 style={{ marginTop: 30 }}>Novo restaurante</h2>

@@ -167,8 +167,8 @@ export default function CheckoutClient({
 
           <div className="form-group">
             <label>Forma de entrega:</label>
-            <div className="admin-inline-form">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="radio-group" style={{ marginBottom: 0 }}>
+              <label>
                 <input
                   type="radio"
                   name="deliveryMethod"
@@ -177,7 +177,7 @@ export default function CheckoutClient({
                 />
                 Entrega
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label>
                 <input
                   type="radio"
                   name="deliveryMethod"
@@ -195,8 +195,8 @@ export default function CheckoutClient({
                 <label htmlFor="street">Rua:</label>
                 <input id="street" type="text" value={street} onChange={(event) => setStreet(event.target.value)} />
               </div>
-              <div className="admin-inline-form" style={{ marginBottom: 20 }}>
-                <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+              <div className="form-row">
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label htmlFor="street-number">Número:</label>
                   <input
                     id="street-number"
@@ -205,7 +205,7 @@ export default function CheckoutClient({
                     onChange={(event) => setStreetNumber(event.target.value)}
                   />
                 </div>
-                <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label htmlFor="complement">Complemento:</label>
                   <input
                     id="complement"
