@@ -24,7 +24,17 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
       </header>
       <main className="app-main-menu">
         {restaurant.description && (
-          <p style={{ color: '#666', marginTop: 0, marginBottom: 20 }}>{restaurant.description}</p>
+          <p style={{ color: '#666', marginTop: 0, marginBottom: 10 }}>{restaurant.description}</p>
+        )}
+        {restaurant.openingHours && (
+          <p style={{ color: '#666', marginTop: 0, marginBottom: 20, fontSize: '0.9rem' }}>
+            <i className="fas fa-clock" aria-hidden="true" /> {restaurant.openingHours}
+          </p>
+        )}
+        {!restaurant.isOpen && (
+          <p className="empty-state" style={{ backgroundColor: '#fdecea', borderRadius: 10, padding: 12 }}>
+            Este restaurante está fechado no momento — volte mais tarde.
+          </p>
         )}
         <MenuClient restaurant={restaurant} />
       </main>

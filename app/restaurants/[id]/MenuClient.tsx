@@ -41,8 +41,13 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
           </div>
           <div className="menu-item-price">
             <span>{formatCurrency(item.price)}</span>
-            <button className="add-to-cart-button" onClick={() => handleAdd(item)}>
-              Adicionar
+            <button
+              className="add-to-cart-button"
+              onClick={() => handleAdd(item)}
+              disabled={!restaurant.isOpen}
+              style={!restaurant.isOpen ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+            >
+              {restaurant.isOpen ? 'Adicionar' : 'Fechado'}
             </button>
           </div>
         </div>

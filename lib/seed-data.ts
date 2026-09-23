@@ -14,6 +14,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     brandColor: null,
     description: null,
     onlinePaymentEnabled: false,
+    isOpen: true,
+    openingHours: '18:00 - 23:00',
     menu: [
       {
         id: 'seed-1-1',
@@ -42,6 +44,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     brandColor: null,
     description: null,
     onlinePaymentEnabled: false,
+    isOpen: true,
+    openingHours: '18:00 - 23:00',
     menu: [
       {
         id: 'seed-2-1',
@@ -70,6 +74,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     brandColor: null,
     description: null,
     onlinePaymentEnabled: false,
+    isOpen: true,
+    openingHours: '18:00 - 23:00',
     menu: [
       {
         id: 'seed-3-1',
@@ -98,6 +104,8 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     brandColor: null,
     description: null,
     onlinePaymentEnabled: false,
+    isOpen: true,
+    openingHours: '18:00 - 23:00',
     menu: [
       {
         id: 'seed-4-1',

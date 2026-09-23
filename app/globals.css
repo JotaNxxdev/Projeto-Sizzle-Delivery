@@ -833,3 +833,61 @@ h2 {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
+
+.status-filter-tabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.status-filter-tabs a {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: #f2f2f2;
+    color: #666;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-filter-tabs a.active {
+    background-color: #43B55C;
+    color: #fff;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.report-card {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.report-card h4 {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.report-card p {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #F26666;
+}
+
+.report-card span {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: #999;
+}

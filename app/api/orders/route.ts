@@ -81,6 +81,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Restaurante não encontrado.' }, { status: 404 });
   }
 
+  if (!restaurant.isOpen) {
+    return NextResponse.json({ error: 'Este restaurante está fechado no momento.' }, { status: 400 });
+  }
+
   // Só aceita "pix" se o restaurante realmente estiver com pagamento online
   // ativado e conectado — nunca confiamos apenas no que o cliente mandou.
   if (paymentMethod === 'pix' && !restaurant.onlinePaymentEnabled) {

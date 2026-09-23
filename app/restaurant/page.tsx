@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
 import { getOrdersForRestaurant } from '@/lib/restaurant-data';
 import { updateOrderStatusAsOwner } from './actions';
@@ -26,22 +27,40 @@ export const dynamic = 'force-dynamic';
 export default async function RestaurantOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; status?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, status } = await searchParams;
   const profile = await getCurrentProfile();
   if (!profile?.restaurantId) return null; // o layout já trata esse caso
   const restaurantId = profile.restaurantId;
 
-  const orders = await getOrdersForRestaurant(restaurantId);
+  const activeStatus = status && (ORDER_STATUSES as string[]).includes(status) ? status : undefined;
+  const orders = await getOrdersForRestaurant(restaurantId, activeStatus);
 
   return (
     <div>
       {error && <p className="empty-state">{error}</p>}
 
+      <div className="status-filter-tabs">
+        <Link href="/restaurant" className={!activeStatus ? 'active' : undefined}>
+          Todos
+        </Link>
+        {ORDER_STATUSES.map((s) => (
+          <Link
+            key={s}
+            href={`/restaurant?status=${encodeURIComponent(s)}`}
+            className={activeStatus === s ? 'active' : undefined}
+          >
+            {s}
+          </Link>
+        ))}
+      </div>
+
       <h2>Pedidos ({orders.length})</h2>
       {orders.length === 0 ? (
-        <p className="empty-state">Nenhum pedido recebido ainda.</p>
+        <p className="empty-state">
+          {activeStatus ? `Nenhum pedido com status "${activeStatus}".` : 'Nenhum pedido recebido ainda.'}
+        </p>
       ) : (
         orders.map((order) => (
           <div className="order-item" key={order.id}>

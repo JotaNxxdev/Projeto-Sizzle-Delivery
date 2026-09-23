@@ -22,6 +22,8 @@ interface RestaurantRow {
   description: string | null;
   online_payment_enabled: boolean;
   mp_access_token: string | null;
+  is_open: boolean;
+  opening_hours: string | null;
   menu_items: MenuItemRow[] | null;
 }
 
@@ -39,6 +41,8 @@ function mapRestaurant(row: RestaurantRow): Restaurant {
     // Só oferece Pix se a loja tiver ativado E realmente tiver conectado
     // uma conta do Mercado Pago (o toggle sozinho não basta).
     onlinePaymentEnabled: row.online_payment_enabled && Boolean(row.mp_access_token),
+    isOpen: row.is_open,
+    openingHours: row.opening_hours,
     menu: (row.menu_items ?? []).map((item) => ({
       id: item.id,
       name: item.name,
@@ -57,7 +61,7 @@ export async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, menu_items(id, name, description, price, image_url)'
+      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, opening_hours, menu_items(id, name, description, price, image_url)'
     )
     .order('name', { ascending: true });
 
