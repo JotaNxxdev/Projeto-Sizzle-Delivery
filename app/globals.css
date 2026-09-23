@@ -927,88 +927,201 @@ h2 {
 }
 
 .comanda {
-    max-width: 380px;
-    margin: 20px auto;
-    padding: 20px;
-    font-family: 'Courier New', monospace;
+    max-width: 480px;
+    margin: 24px auto;
+    padding: 0 24px 36px;
+    font-family: var(--font-poppins), sans-serif;
     background-color: #fff;
     color: #111;
 }
 
-.comanda h2 {
-    text-align: center;
-    margin: 0 0 4px;
+.comanda-header {
+    background-color: #0F172A;
+    color: #fff;
+    border-radius: 16px;
+    padding: 26px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 28px;
 }
 
-.comanda-subtitle {
-    text-align: center;
-    margin: 0 0 2px;
+.comanda-header-brand h1 {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+}
+
+.comanda-header-brand p {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
+}
+
+.comanda-header-meta {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.comanda-order-code {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.comanda-datetime {
+    margin: 6px 0 0;
     font-size: 0.8rem;
-    color: #666;
+    color: rgba(255, 255, 255, 0.65);
 }
 
-.comanda-code {
-    text-align: center;
+.comanda-label {
+    margin: 0 0 3px;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     font-weight: 700;
-    margin: 0;
+    color: #999;
 }
 
-.comanda hr {
+.comanda-value {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #151515;
+}
+
+.comanda-divider {
     border: none;
-    border-top: 1px dashed #999;
-    margin: 12px 0;
+    border-top: 1px solid #e8e8e8;
+    margin: 22px 0;
 }
 
-.comanda-items {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.comanda-section-title {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
 }
 
-.comanda-items li {
+.comanda-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.comanda-table thead th {
+    text-align: left;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e8e8e8;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #999;
+}
+
+.comanda-table thead th:first-child {
+    width: 15%;
+}
+
+.comanda-table thead th:last-child,
+.comanda-table td:last-child {
+    text-align: right;
+}
+
+.comanda-table td {
+    padding: 9px 0;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.comanda-table td:last-child {
+    font-weight: 600;
+}
+
+.comanda-totals {
+    margin-top: 16px;
+}
+
+.comanda-totals .comanda-line {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 4px;
-    font-size: 0.9rem;
-}
-
-.comanda-line {
-    display: flex;
-    justify-content: space-between;
-    margin: 4px 0;
+    font-size: 0.95rem;
+    color: #666;
+    margin: 5px 0;
 }
 
 .comanda-total {
-    font-weight: 700;
-    font-size: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin: 10px 0 0;
+}
+
+.comanda-payment-status {
+    margin: 12px 0 0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.comanda-payment-status.positive {
+    color: #16A34A;
+}
+
+.comanda-payment-status.warning {
+    color: #D97706;
+}
+
+.comanda-payment-status.negative {
+    color: #DC2626;
+}
+
+.comanda-payment-status.neutral {
+    color: #444;
 }
 
 .comanda-qr {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 40px;
 }
 
 .comanda-qr img {
-    width: 140px;
-    height: 140px;
+    width: 180px;
+    height: 180px;
 }
 
-.comanda-qr p {
+.comanda-qr-caption {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #444;
+}
+
+.comanda-qr-code {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #999;
 }
 
 .comanda-actions {
     display: flex;
     justify-content: center;
     gap: 15px;
-    margin-top: 20px;
+    margin: 20px 0 30px;
 }
 
 .comanda-actions button {
@@ -1038,5 +1151,10 @@ h2 {
     .comanda {
         margin: 0;
         max-width: 100%;
+    }
+
+    .comanda-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
