@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Restaurante não encontrado.' }, { status: 404 });
   }
 
-  if (!restaurant.isOpen) {
+  if (!restaurant.isOpenNow) {
     return NextResponse.json({ error: 'Este restaurante está fechado no momento.' }, { status: 400 });
   }
 

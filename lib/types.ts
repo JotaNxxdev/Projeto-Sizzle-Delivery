@@ -4,7 +4,17 @@ export interface MenuItem {
   description: string;
   price: number;
   image: string;
+  category: string;
 }
+
+export interface DayHours {
+  enabled: boolean;
+  open: string; // "HH:MM"
+  close: string; // "HH:MM"
+}
+
+// Array de 7 posições: domingo = índice 0 ... sábado = índice 6.
+export type BusinessHours = DayHours[];
 
 export interface Restaurant {
   id: string;
@@ -17,8 +27,9 @@ export interface Restaurant {
   brandColor: string | null;
   description: string | null;
   onlinePaymentEnabled: boolean;
-  isOpen: boolean;
-  openingHours: string | null;
+  isOpen: boolean; // toggle manual (pausar/reabrir loja)
+  businessHours: BusinessHours | null;
+  isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
   menu: MenuItem[];
 }
 
