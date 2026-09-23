@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 async function requireCourier() {
   const profile = await getCurrentProfile();
@@ -63,6 +64,15 @@ export async function markPickedUp(formData: FormData) {
 
   if (error) fail('/courier', 'Não foi possível atualizar o pedido.');
 
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'update_status',
+    entity: 'order',
+    entityId: orderId,
+    newValue: { status: 'Saiu para entrega' },
+  });
+
   revalidatePath('/courier');
   revalidatePath('/restaurant');
 }
@@ -80,6 +90,15 @@ export async function markDelivered(formData: FormData) {
     .eq('courier_id', profile.id);
 
   if (error) fail('/courier', 'Não foi possível marcar como entregue.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'update_status',
+    entity: 'order',
+    entityId: orderId,
+    newValue: { status: 'Entregue' },
+  });
 
   revalidatePath('/courier');
   revalidatePath('/restaurant');

@@ -235,6 +235,35 @@ h2 {
     margin-right: 5px;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+@media (min-width: 600px) {
+    .modal-overlay {
+        align-items: center;
+    }
+    .modal-content {
+        border-radius: 16px;
+    }
+}
+
 /* Estilos do rodapé */
 .app-footer {
     background-color: #fff;

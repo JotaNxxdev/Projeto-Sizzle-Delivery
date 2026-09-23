@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
+import StarRating from '@/components/StarRating';
 import { formatCurrency } from '@/lib/format';
 import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
 import { useToast } from '@/contexts/ToastContext';
@@ -38,6 +39,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
+  const [submittingReviewId, setSubmittingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +78,36 @@ export default function OrdersPage() {
       showToast(message, 'error');
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function handleSubmitReview(orderCode: string) {
+    const draft = reviewDrafts[orderCode];
+    if (!draft || draft.rating < 1) {
+      showToast('Escolha de 1 a 5 estrelas antes de enviar.', 'error');
+      return;
+    }
+
+    setSubmittingReviewId(orderCode);
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: draft.rating, comment: draft.comment }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.error || 'Não foi possível enviar sua avaliação.');
+      }
+      showToast('Avaliação enviada, obrigado!', 'success');
+      const refreshed = await fetchOrders();
+      setOrders(refreshed);
+    } catch (err) {
+      console.error('[Sizzle] Erro ao enviar avaliação:', err);
+      const message = err instanceof Error ? err.message : 'Não foi possível enviar sua avaliação.';
+      showToast(message, 'error');
+    } finally {
+      setSubmittingReviewId(null);
     }
   }
 
@@ -139,9 +172,17 @@ export default function OrdersPage() {
                   {order.items.map((item, index) => (
                     <li key={index}>
                       {item.quantity}x {item.name} ({formatCurrency(item.price)})
+                      {item.options.length > 0 && (
+                        <span style={{ color: '#666' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
+                {order.discountAmount > 0 && (
+                  <p>
+                    <strong>Desconto ({order.couponCode}):</strong> -{formatCurrency(order.discountAmount)}
+                  </p>
+                )}
                 <p>
                   <strong>Total:</strong> {formatCurrency(order.total)}
                 </p>
@@ -156,6 +197,59 @@ export default function OrdersPage() {
                 >
                   {cancellingId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
                 </button>
+              )}
+              {order.status === 'Entregue' && (
+                <div style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid #eee' }}>
+                  {order.review ? (
+                    <>
+                      <p style={{ marginBottom: 5 }}>
+                        <strong>Sua avaliação:</strong>
+                      </p>
+                      <StarRating value={order.review.rating} readOnly size={18} />
+                      {order.review.comment && <p style={{ marginTop: 5 }}>{order.review.comment}</p>}
+                      {order.review.restaurantReply && (
+                        <p style={{ marginTop: 5, color: '#666' }}>
+                          <strong>Resposta do restaurante:</strong> {order.review.restaurantReply}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ marginBottom: 5 }}>
+                        <strong>Avalie esse pedido:</strong>
+                      </p>
+                      <StarRating
+                        value={reviewDrafts[order.id]?.rating ?? 0}
+                        onChange={(rating) =>
+                          setReviewDrafts((prev) => ({
+                            ...prev,
+                            [order.id]: { rating, comment: prev[order.id]?.comment ?? '' },
+                          }))
+                        }
+                      />
+                      <textarea
+                        placeholder="Comentário (opcional)"
+                        value={reviewDrafts[order.id]?.comment ?? ''}
+                        onChange={(e) =>
+                          setReviewDrafts((prev) => ({
+                            ...prev,
+                            [order.id]: { rating: prev[order.id]?.rating ?? 0, comment: e.target.value },
+                          }))
+                        }
+                        style={{ display: 'block', width: '100%', marginTop: 8, minHeight: 60 }}
+                      />
+                      <button
+                        type="button"
+                        className="quantity-btn admin-btn"
+                        style={{ marginTop: 8 }}
+                        onClick={() => handleSubmitReview(order.id)}
+                        disabled={submittingReviewId === order.id}
+                      >
+                        {submittingReviewId === order.id ? 'Enviando...' : 'Enviar avaliação'}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           ))}

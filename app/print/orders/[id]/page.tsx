@@ -107,7 +107,17 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
             {order.items.map((item, index) => (
               <tr key={index}>
                 <td>{String(item.quantity).padStart(2, '0')}</td>
-                <td>{item.name}</td>
+                <td>
+                  {item.name}
+                  {item.options.length > 0 && (
+                    <>
+                      <br />
+                      <span style={{ fontSize: '0.85em', color: '#555' }}>
+                        {item.options.map((o) => o.optionName).join(', ')}
+                      </span>
+                    </>
+                  )}
+                </td>
                 <td>{formatCurrency(item.price * item.quantity)}</td>
               </tr>
             ))}

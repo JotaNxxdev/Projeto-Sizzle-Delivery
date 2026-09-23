@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
 import { getMenuItemsForRestaurant, type OwnerMenuItem } from '@/lib/restaurant-data';
 import { createMenuItem, updateMenuItem, deleteMenuItem } from '../actions';
@@ -107,6 +108,13 @@ export default async function RestaurantMenuPage({
                     </button>
                   </div>
                 </form>
+                <Link
+                  href={`/restaurant/menu/${item.id}/options`}
+                  className="quantity-btn admin-btn"
+                  style={{ display: 'inline-block', marginTop: 10, textAlign: 'center' }}
+                >
+                  Gerenciar adicionais
+                </Link>
                 <form action={deleteMenuItem} style={{ marginTop: 10 }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="itemId" value={item.id} />

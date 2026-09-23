@@ -1,3 +1,17 @@
+export interface MenuItemOptionValue {
+  id: string;
+  name: string;
+  priceDelta: number;
+}
+
+export interface MenuItemOptionGroup {
+  id: string;
+  name: string;
+  minSelections: number;
+  maxSelections: number;
+  values: MenuItemOptionValue[];
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -5,6 +19,7 @@ export interface MenuItem {
   price: number;
   image: string;
   category: string;
+  optionGroups: MenuItemOptionGroup[];
 }
 
 export interface DayHours {
@@ -31,13 +46,26 @@ export interface Restaurant {
   businessHours: BusinessHours | null;
   isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
   minOrderValue: number;
+  reviewCount: number;
   menu: MenuItem[];
 }
 
+export interface SelectedOption {
+  groupId: string;
+  groupName: string;
+  valueId: string;
+  valueName: string;
+  priceDelta: number;
+}
+
 export interface CartItem {
+  // Identifica uma combinação de item + adicionais escolhidos, pra poder ter
+  // duas linhas diferentes do mesmo item no carrinho (ex: um X-Bacon com
+  // bacon extra e outro sem). Igual ao menuItemId quando não há adicionais.
+  cartItemId: string;
   menuItemId: string;
   name: string;
-  price: number;
+  price: number; // preço final por unidade, já somando os adicionais escolhidos
   image: string;
   quantity: number;
   restaurantId: string;
@@ -45,12 +73,20 @@ export interface CartItem {
   deliveryFee: number;
   onlinePaymentEnabled: boolean;
   minOrderValue: number;
+  selectedOptions: SelectedOption[];
+}
+
+export interface OrderItemOption {
+  groupName: string;
+  optionName: string;
+  priceDelta: number;
 }
 
 export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  options: OrderItemOption[];
 }
 
 export type OrderStatus =
@@ -108,6 +144,12 @@ export interface OrderAddress {
   referencePoint: string | null;
 }
 
+export interface OrderReview {
+  rating: number;
+  comment: string | null;
+  restaurantReply: string | null;
+}
+
 export interface Order {
   id: string;
   restaurantName: string;
@@ -125,6 +167,9 @@ export interface Order {
   paymentStatus: PaymentStatus;
   subtotal: number;
   deliveryFee: number;
+  couponCode: string | null;
+  discountAmount: number;
   total: number;
   date: string;
+  review: OrderReview | null;
 }

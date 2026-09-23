@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getRestaurantById } from '@/lib/restaurants';
+import { getReviewsForRestaurant } from '@/lib/reviews';
 import { formatBusinessHoursSummary } from '@/lib/business-hours';
 import { formatCurrency } from '@/lib/format';
 import BackButton from '@/components/BackButton';
+import StarRating from '@/components/StarRating';
 import MenuClient from './MenuClient';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +18,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
   }
 
   const hoursSummary = formatBusinessHoursSummary(restaurant.businessHours);
+  const reviews = await getReviewsForRestaurant(id);
 
   return (
     <div className="screen">
@@ -46,6 +49,33 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
           </p>
         )}
         <MenuClient restaurant={restaurant} />
+
+        {reviews.length > 0 && (
+          <div style={{ marginTop: 30 }}>
+            <h3>
+              Avaliações {restaurant.reviewCount > 0 && `(${restaurant.rating.toFixed(1)} ⭐ · ${restaurant.reviewCount})`}
+            </h3>
+            {reviews.map((review) => (
+              <div key={review.id} className="order-item" style={{ marginBottom: 15 }}>
+                <div className="order-header">
+                  <StarRating value={review.rating} readOnly size={16} />
+                  <span style={{ color: '#666', fontSize: '0.85rem' }}>{review.createdAt}</span>
+                </div>
+                <div className="order-details">
+                  <p>
+                    <strong>{review.reviewerName}</strong>
+                  </p>
+                  {review.comment && <p>{review.comment}</p>}
+                  {review.restaurantReply && (
+                    <p style={{ color: '#666' }}>
+                      <strong>Resposta do restaurante:</strong> {review.restaurantReply}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

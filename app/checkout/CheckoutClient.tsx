@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
+import type { Address } from '@/lib/addresses';
 import PixPayment from './PixPayment';
 
 interface PendingPayment {
@@ -19,6 +20,8 @@ interface CompletedOrder {
   orderCode: string;
   total: number;
 }
+
+const NEW_ADDRESS_OPTION = '__new__';
 
 export default function CheckoutClient({
   defaultContact,
@@ -48,9 +51,97 @@ export default function CheckoutClient({
   const [submitting, setSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(NEW_ADDRESS_OPTION);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/addresses')
+      .then((response) => response.json())
+      .then((body) => {
+        if (cancelled) return;
+        const addresses: Address[] = body?.addresses ?? [];
+        setSavedAddresses(addresses);
+
+        const defaultAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          applyAddress(defaultAddress);
+        }
+      })
+      .catch((err) => console.error('[Sizzle] Erro ao carregar endereços salvos:', err));
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function applyAddress(address: Address) {
+    setStreet(address.street);
+    setStreetNumber(address.streetNumber);
+    setComplement(address.complement ?? '');
+    setNeighborhood(address.neighborhood);
+    setCity(address.city);
+    setReferencePoint(address.referencePoint ?? '');
+  }
+
+  function handleSelectAddress(addressId: string) {
+    setSelectedAddressId(addressId);
+    if (addressId === NEW_ADDRESS_OPTION) {
+      setStreet('');
+      setStreetNumber('');
+      setComplement('');
+      setNeighborhood('');
+      setCity('');
+      setReferencePoint('');
+      return;
+    }
+    const address = savedAddresses.find((a) => a.id === addressId);
+    if (address) applyAddress(address);
+  }
 
   const deliveryFee = cart[0]?.deliveryFee ?? 0;
-  const total = subtotal + deliveryFee;
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = subtotal - discount + deliveryFee;
+
+  async function handleApplyCoupon() {
+    if (!couponInput.trim()) return;
+    if (cart.length === 0) return;
+
+    setApplyingCoupon(true);
+    try {
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurantId: cart[0].restaurantId, code: couponInput, subtotal }),
+      });
+      const result = await response.json();
+
+      if (!result.valid) {
+        showToast(result.error || 'Cupom inválido.', 'error');
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon({ code: couponInput.trim().toUpperCase(), discount: result.discount });
+      showToast(`Cupom aplicado! Desconto de ${formatCurrency(result.discount)}.`, 'success');
+    } catch (err) {
+      console.error('[Sizzle] Erro ao validar cupom:', err);
+      showToast('Não foi possível validar o cupom agora.', 'error');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponInput('');
+  }
 
   async function handleSubmit() {
     // Trava extra contra clique duplo — o botão já fica disabled enquanto
@@ -83,6 +174,7 @@ export default function CheckoutClient({
           items: cart.map((item) => ({
             menuItemId: item.menuItemId,
             quantity: item.quantity,
+            selectedValueIds: item.selectedOptions.map((option) => option.valueId),
           })),
           notes,
           contact,
@@ -96,6 +188,7 @@ export default function CheckoutClient({
           referencePoint,
           paymentMethod,
           changeFor: paymentMethod === 'cash' && changeFor.trim() ? Number(changeFor) : null,
+          couponCode: appliedCoupon?.code || undefined,
         }),
       });
 
@@ -235,6 +328,23 @@ export default function CheckoutClient({
 
           {deliveryMethod === 'delivery' && (
             <>
+              {savedAddresses.length > 0 && (
+                <div className="form-group">
+                  <label htmlFor="saved-address">Endereço salvo:</label>
+                  <select
+                    id="saved-address"
+                    value={selectedAddressId}
+                    onChange={(event) => handleSelectAddress(event.target.value)}
+                  >
+                    {savedAddresses.map((address) => (
+                      <option key={address.id} value={address.id}>
+                        {address.label} — {address.street}, {address.streetNumber}
+                      </option>
+                    ))}
+                    <option value={NEW_ADDRESS_OPTION}>Digitar outro endereço</option>
+                  </select>
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="street">Rua:</label>
                 <input id="street" type="text" value={street} onChange={(event) => setStreet(event.target.value)} />
@@ -325,6 +435,44 @@ export default function CheckoutClient({
             </div>
           )}
 
+          <div className="form-group">
+            <label htmlFor="coupon-code">Cupom de desconto:</label>
+            {appliedCoupon ? (
+              <div className="admin-inline-form">
+                <span style={{ color: '#43B55C', fontWeight: 600 }}>
+                  {appliedCoupon.code} aplicado (-{formatCurrency(appliedCoupon.discount)})
+                </span>
+                <button type="button" className="quantity-btn admin-btn" onClick={handleRemoveCoupon}>
+                  Remover
+                </button>
+              </div>
+            ) : (
+              <div className="admin-inline-form">
+                <input
+                  id="coupon-code"
+                  type="text"
+                  placeholder="Ex: BEMVINDO10"
+                  value={couponInput}
+                  onChange={(event) => setCouponInput(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="quantity-btn admin-btn"
+                  onClick={handleApplyCoupon}
+                  disabled={applyingCoupon || !couponInput.trim()}
+                >
+                  {applyingCoupon ? 'Aplicando...' : 'Aplicar'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {discount > 0 && (
+            <div className="summary-line">
+              <span>Desconto</span>
+              <span>-{formatCurrency(discount)}</span>
+            </div>
+          )}
           <div className="summary-line total" style={{ marginBottom: 20 }}>
             <span>Total do pedido</span>
             <span>{formatCurrency(total)}</span>

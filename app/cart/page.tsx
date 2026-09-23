@@ -40,17 +40,22 @@ export default function CartPage() {
             <p className="empty-state">Seu carrinho está vazio.</p>
           ) : (
             cart.map((item) => (
-              <div className="cart-item" key={item.menuItemId}>
+              <div className="cart-item" key={item.cartItemId}>
                 <img src={item.image} alt={item.name} />
                 <div className="cart-item-info">
                   <h4>{item.name}</h4>
                   <p>{formatCurrency(item.price)}</p>
+                  {item.selectedOptions.length > 0 && (
+                    <p style={{ color: '#666', fontSize: '0.85rem' }}>
+                      {item.selectedOptions.map((option) => option.valueName).join(', ')}
+                    </p>
+                  )}
                 </div>
                 <div className="item-quantity-price">
                   <div className="item-quantity-control">
                     <button
                       className="quantity-btn"
-                      onClick={() => updateQuantity(item.menuItemId, -1)}
+                      onClick={() => updateQuantity(item.cartItemId, -1)}
                       aria-label={`Diminuir quantidade de ${item.name}`}
                     >
                       -
@@ -58,7 +63,7 @@ export default function CartPage() {
                     <span className="item-quantity">{item.quantity}</span>
                     <button
                       className="quantity-btn"
-                      onClick={() => updateQuantity(item.menuItemId, 1)}
+                      onClick={() => updateQuantity(item.cartItemId, 1)}
                       aria-label={`Aumentar quantidade de ${item.name}`}
                     >
                       +
