@@ -1,8 +1,16 @@
+import QRCode from 'qrcode';
 import { notFound, redirect } from 'next/navigation';
 import { getCurrentProfile } from '@/lib/auth';
-import { getOrderForOwner } from '@/lib/restaurant-data';
+import { getOrderForOwner, getRestaurantSettings } from '@/lib/restaurant-data';
 import { formatCurrency } from '@/lib/format';
-import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, type DeliveryMethod, type PaymentMethod } from '@/lib/types';
+import {
+  DELIVERY_METHOD_LABEL,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_LABEL,
+  type DeliveryMethod,
+  type PaymentMethod,
+  type PaymentStatus,
+} from '@/lib/types';
 import AutoPrint from './AutoPrint';
 
 export const dynamic = 'force-dynamic';
@@ -14,16 +22,39 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
   if (!profile) redirect(`/login?next=/print/orders/${id}`);
   if (profile.role !== 'restaurant_owner' || !profile.restaurantId) redirect('/');
 
-  const order = await getOrderForOwner(profile.restaurantId, id);
+  const [order, restaurant] = await Promise.all([
+    getOrderForOwner(profile.restaurantId, id),
+    getRestaurantSettings(profile.restaurantId),
+  ]);
   if (!order) notFound();
+
+  // Código que o entregador vai escanear pra bater com o pedido — só o
+  // código do pedido por enquanto (formato simples, fácil de conferir
+  // manualmente se a câmera falhar).
+  const qrDataUrl = await QRCode.toDataURL(order.orderCode, { margin: 1, width: 200 });
 
   return (
     <div className="comanda">
       <AutoPrint />
 
-      <h2>Sizzle Delivery</h2>
+      <h2 style={restaurant?.brandColor ? { color: restaurant.brandColor } : undefined}>
+        {restaurant?.name || 'Sizzle Delivery'}
+      </h2>
+      {restaurant?.category && <p className="comanda-subtitle">{restaurant.category}</p>}
+      <p className="comanda-subtitle">Pedido via Sizzle Delivery</p>
+
+      <hr />
+
       <p className="comanda-code">Pedido #{order.orderCode}</p>
       <p style={{ textAlign: 'center', margin: 0 }}>{order.createdAt}</p>
+      <p className="comanda-line" style={{ marginTop: 8 }}>
+        <span>Status</span>
+        <span>{order.status}</span>
+      </p>
+      <p className="comanda-line">
+        <span>Pagamento</span>
+        <span>{PAYMENT_STATUS_LABEL[order.paymentStatus as PaymentStatus] ?? order.paymentStatus}</span>
+      </p>
 
       <hr />
 
@@ -71,7 +102,8 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
       <hr />
 
       <p>
-        <strong>Pagamento:</strong> {PAYMENT_METHOD_LABEL[order.paymentMethod as PaymentMethod] ?? order.paymentMethod}
+        <strong>Forma de pagamento:</strong>{' '}
+        {PAYMENT_METHOD_LABEL[order.paymentMethod as PaymentMethod] ?? order.paymentMethod}
         {order.paymentMethod === 'cash' && order.changeFor != null && (
           <> — troco para {formatCurrency(order.changeFor)}</>
         )}
@@ -81,6 +113,14 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
           <strong>Obs:</strong> {order.notes}
         </p>
       )}
+
+      <hr />
+
+      <div className="comanda-qr">
+        {/* eslint-disable-next-line @next/next/no-img-element -- data URI gerado no servidor, não é uma imagem otimizável */}
+        <img src={qrDataUrl} alt={`Código de retirada do pedido ${order.orderCode}`} width={140} height={140} />
+        <p>Código de retirada: {order.orderCode}</p>
+      </div>
     </div>
   );
 }
