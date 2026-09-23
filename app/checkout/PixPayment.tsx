@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PaymentStatus } from '@/lib/types';
 import { PAYMENT_STATUS_LABEL } from '@/lib/types';
+import { useToast } from '@/contexts/ToastContext';
 
 const POLL_INTERVAL_MS = 4000;
 const TERMINAL_STATUSES: PaymentStatus[] = ['approved', 'rejected', 'cancelled', 'refunded'];
@@ -18,6 +19,7 @@ export default function PixPayment({
   qrCodeBase64: string | null;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [status, setStatus] = useState<PaymentStatus>('pending');
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +61,7 @@ export default function PixPayment({
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      alert('Não foi possível copiar. Selecione o código manualmente.');
+      showToast('Não foi possível copiar. Selecione o código manualmente.', 'error');
     }
   }
 

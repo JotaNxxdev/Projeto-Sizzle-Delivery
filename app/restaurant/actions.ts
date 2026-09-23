@@ -35,6 +35,44 @@ export async function updateOrderStatusAsOwner(formData: FormData) {
   revalidatePath('/restaurant');
 }
 
+export async function acceptOrder(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const orderId = String(formData.get('orderId') || '');
+  if (!orderId) fail('/restaurant', 'Pedido é obrigatório.');
+
+  const { error } = await db
+    .from('orders')
+    .update({ status: 'Em Preparação' })
+    .eq('id', orderId)
+    .eq('restaurant_id', restaurantId)
+    .eq('status', 'Pendente');
+  if (error) fail('/restaurant', 'Não foi possível aceitar o pedido.');
+
+  revalidatePath('/restaurant');
+}
+
+export async function rejectOrder(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const orderId = String(formData.get('orderId') || '');
+  const reason = String(formData.get('reason') || '').trim();
+  if (!orderId) fail('/restaurant', 'Pedido é obrigatório.');
+  if (!reason) fail('/restaurant', 'Informe o motivo da recusa.');
+
+  const { error } = await db
+    .from('orders')
+    .update({ status: 'Recusado', rejection_reason: reason })
+    .eq('id', orderId)
+    .eq('restaurant_id', restaurantId);
+  if (error) fail('/restaurant', 'Não foi possível recusar o pedido.');
+
+  revalidatePath('/restaurant');
+  revalidatePath('/orders');
+}
+
 export async function updateRestaurantSettings(formData: FormData) {
   const restaurantId = String(formData.get('restaurantId') || '');
   const db = await requireOwnerOf(restaurantId);
@@ -43,10 +81,11 @@ export async function updateRestaurantSettings(formData: FormData) {
   const category = String(formData.get('category') || '').trim();
   const deliveryTime = String(formData.get('deliveryTime') || '').trim();
   const deliveryFee = Number(formData.get('deliveryFee') || 0);
+  const minOrderValue = Number(formData.get('minOrderValue') || 0);
   const brandColor = String(formData.get('brandColor') || '').trim() || null;
   const description = String(formData.get('description') || '').trim() || null;
 
-  if (!name || !category || !deliveryTime || !(deliveryFee >= 0)) {
+  if (!name || !category || !deliveryTime || !(deliveryFee >= 0) || !(minOrderValue >= 0)) {
     fail('/restaurant/settings', 'Nome, categoria, tempo de entrega e taxa são obrigatórios.');
   }
 
@@ -55,6 +94,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     category: string;
     delivery_time: string;
     delivery_fee: number;
+    min_order_value: number;
     brand_color: string | null;
     description: string | null;
     image_url?: string;
@@ -63,6 +103,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     category,
     delivery_time: deliveryTime,
     delivery_fee: deliveryFee,
+    min_order_value: minOrderValue,
     brand_color: brandColor,
     description,
   };
@@ -178,17 +219,20 @@ export async function updateMenuItem(formData: FormData) {
   const price = Number(formData.get('price') || 0);
   const imageUrl = String(formData.get('imageUrl') || '').trim() || null;
   const category = String(formData.get('category') || '').trim() || 'Geral';
+  const active = formData.get('active') === 'on';
 
   if (!itemId || !name || !(price > 0)) fail('/restaurant/menu', 'Dados inválidos.');
 
   const { error } = await db
     .from('menu_items')
-    .update({ name, description, price, image_url: imageUrl, category })
+    .update({ name, description, price, image_url: imageUrl, category, active })
     .eq('id', itemId)
     .eq('restaurant_id', restaurantId);
   if (error) fail('/restaurant/menu', 'Não foi possível atualizar o item.');
 
   revalidatePath('/restaurant/menu');
+  revalidatePath('/');
+  revalidatePath(`/restaurants/${restaurantId}`);
 }
 
 export async function deleteMenuItem(formData: FormData) {

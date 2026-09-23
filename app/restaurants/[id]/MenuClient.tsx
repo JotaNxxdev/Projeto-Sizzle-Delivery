@@ -30,6 +30,7 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
       restaurantName: restaurant.name,
       deliveryFee: restaurant.deliveryFee,
       onlinePaymentEnabled: restaurant.onlinePaymentEnabled,
+      minOrderValue: restaurant.minOrderValue,
     });
 
     if (!blocked) {

@@ -30,6 +30,7 @@ export interface Restaurant {
   isOpen: boolean; // toggle manual (pausar/reabrir loja)
   businessHours: BusinessHours | null;
   isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
+  minOrderValue: number;
   menu: MenuItem[];
 }
 
@@ -43,6 +44,7 @@ export interface CartItem {
   restaurantName: string;
   deliveryFee: number;
   onlinePaymentEnabled: boolean;
+  minOrderValue: number;
 }
 
 export interface OrderItem {
@@ -51,9 +53,22 @@ export interface OrderItem {
   quantity: number;
 }
 
-export type OrderStatus = 'Pendente' | 'Em Preparação' | 'Saiu para entrega' | 'Entregue';
+export type OrderStatus =
+  | 'Pendente'
+  | 'Em Preparação'
+  | 'Saiu para entrega'
+  | 'Entregue'
+  | 'Recusado'
+  | 'Cancelado';
 
-export const ORDER_STATUSES: OrderStatus[] = ['Pendente', 'Em Preparação', 'Saiu para entrega', 'Entregue'];
+export const ORDER_STATUSES: OrderStatus[] = [
+  'Pendente',
+  'Em Preparação',
+  'Saiu para entrega',
+  'Entregue',
+  'Recusado',
+  'Cancelado',
+];
 
 // Status do pagamento Pix (Mercado Pago) — independente do status de
 // preparo/entrega acima. 'pending' quando ainda não configuramos o
@@ -106,6 +121,7 @@ export interface Order {
   paymentMethod: PaymentMethod;
   changeFor: number | null;
   status: OrderStatus;
+  rejectionReason: string | null;
   paymentStatus: PaymentStatus;
   subtotal: number;
   deliveryFee: number;

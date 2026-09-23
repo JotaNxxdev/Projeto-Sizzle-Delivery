@@ -2,6 +2,7 @@ import { getCurrentProfile } from '@/lib/auth';
 import { getMenuItemsForRestaurant, type OwnerMenuItem } from '@/lib/restaurant-data';
 import { createMenuItem, updateMenuItem, deleteMenuItem } from '../actions';
 import { formatCurrency } from '@/lib/format';
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,9 @@ export default async function RestaurantMenuPage({
               <details key={item.id} className="menu-item" style={{ display: 'block', padding: 15 }}>
                 <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
                   {item.name} — {formatCurrency(item.price)}
+                  {!item.active && (
+                    <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (inativo)</span>
+                  )}
                 </summary>
                 <form action={updateMenuItem} className="checkout-form" style={{ marginTop: 15, boxShadow: 'none' }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
@@ -58,6 +62,15 @@ export default async function RestaurantMenuPage({
                     <label htmlFor={`name-${item.id}`}>Nome</label>
                     <input id={`name-${item.id}`} name="name" defaultValue={item.name} required />
                   </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                    <input
+                      type="checkbox"
+                      name="active"
+                      defaultChecked={item.active}
+                      style={{ width: 20, height: 20, flexShrink: 0, margin: 0 }}
+                    />
+                    Item ativo (visível pro cliente)
+                  </label>
                   <div className="form-group">
                     <label htmlFor={`category-${item.id}`}>Categoria</label>
                     <input
@@ -97,9 +110,12 @@ export default async function RestaurantMenuPage({
                 <form action={deleteMenuItem} style={{ marginTop: 10 }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="itemId" value={item.id} />
-                  <button type="submit" className="quantity-btn admin-btn">
+                  <ConfirmSubmitButton
+                    confirmMessage={`Excluir "${item.name}" do cardápio? Essa ação não pode ser desfeita — se preferir só esconder do cliente, desmarque "Item ativo" em vez disso.`}
+                    className="quantity-btn admin-btn"
+                  >
                     Excluir item
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               </details>
             ))}

@@ -1,5 +1,6 @@
 import { listRestaurantsWithOwner } from '@/lib/admin-data';
 import { createRestaurant, assignOwner, removeOwner } from '../actions';
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,12 @@ export default async function AdminRestaurantsPage({
                     <form action={removeOwner}>
                       <input type="hidden" name="restaurantId" value={restaurant.id} />
                       <input type="hidden" name="ownerId" value={restaurant.ownerId} />
-                      <button type="submit" className="quantity-btn admin-btn">
+                      <ConfirmSubmitButton
+                        confirmMessage={`Remover ${restaurant.ownerEmail ?? 'o dono atual'} como dono de "${restaurant.name}"?`}
+                        className="quantity-btn admin-btn"
+                      >
                         Remover dono
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   ) : (
                     <form action={assignOwner} className="admin-inline-form">

@@ -4,12 +4,15 @@ import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
 import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
+import { useToast } from '@/contexts/ToastContext';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
   'Em Preparação': 'in-progress',
   'Saiu para entrega': 'out-for-delivery',
   Entregue: 'delivered',
+  Recusado: 'cancelled',
+  Cancelado: 'cancelled',
 };
 
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -21,34 +24,59 @@ const PAYMENT_STATUS_CLASS: Record<string, string> = {
   refunded: 'cancelled',
 };
 
+async function fetchOrders(): Promise<Order[]> {
+  const response = await fetch('/api/orders');
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error(body?.error || 'Erro ao carregar pedidos.');
+  }
+  return body.orders;
+}
+
 export default function OrdersPage() {
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadOrders() {
-      try {
-        const response = await fetch('/api/orders');
-        const body = await response.json();
-        if (cancelled) return;
-
-        if (!response.ok) {
-          throw new Error(body?.error || 'Erro ao carregar pedidos.');
-        }
-        setOrders(body.orders);
-      } catch (err) {
+    fetchOrders()
+      .then((result) => {
+        if (!cancelled) setOrders(result);
+      })
+      .catch((err) => {
         console.error('[Sizzle] Erro ao carregar pedidos:', err);
         if (!cancelled) setError('Não foi possível carregar seus pedidos agora.');
-      }
-    }
+      });
 
-    loadOrders();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  async function handleCancel(orderCode: string) {
+    if (!window.confirm(`Cancelar o pedido #${orderCode}? Essa ação não pode ser desfeita.`)) return;
+
+    setCancellingId(orderCode);
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/cancel`, { method: 'POST' });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(body?.error || 'Não foi possível cancelar o pedido.');
+      }
+      showToast('Pedido cancelado.', 'success');
+      const refreshed = await fetchOrders();
+      setOrders(refreshed);
+    } catch (err) {
+      console.error('[Sizzle] Erro ao cancelar pedido:', err);
+      const message = err instanceof Error ? err.message : 'Não foi possível cancelar o pedido.';
+      showToast(message, 'error');
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   return (
     <div className="screen">
@@ -99,6 +127,11 @@ export default function OrdersPage() {
                 <p>
                   <strong>Observações:</strong> {order.notes || 'Nenhuma'}
                 </p>
+                {order.status === 'Recusado' && order.rejectionReason && (
+                  <p>
+                    <strong>Motivo da recusa:</strong> {order.rejectionReason}
+                  </p>
+                )}
                 <p>
                   <strong>Itens:</strong>
                 </p>
@@ -113,6 +146,17 @@ export default function OrdersPage() {
                   <strong>Total:</strong> {formatCurrency(order.total)}
                 </p>
               </div>
+              {order.status === 'Pendente' && (
+                <button
+                  type="button"
+                  className="quantity-btn admin-btn"
+                  style={{ marginTop: 10 }}
+                  onClick={() => handleCancel(order.id)}
+                  disabled={cancellingId === order.id}
+                >
+                  {cancellingId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
@@ -14,6 +15,11 @@ interface PendingPayment {
   qrCodeBase64: string | null;
 }
 
+interface CompletedOrder {
+  orderCode: string;
+  total: number;
+}
+
 export default function CheckoutClient({
   defaultContact,
   defaultReceiverName,
@@ -23,6 +29,7 @@ export default function CheckoutClient({
 }) {
   const { cart, subtotal, clearCart } = useCart();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const onlinePaymentEnabled = cart[0]?.onlinePaymentEnabled ?? false;
 
@@ -40,24 +47,29 @@ export default function CheckoutClient({
   const [changeFor, setChangeFor] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
 
   const deliveryFee = cart[0]?.deliveryFee ?? 0;
   const total = subtotal + deliveryFee;
 
   async function handleSubmit() {
+    // Trava extra contra clique duplo — o botão já fica disabled enquanto
+    // submitting é true, isso aqui é só uma segunda camada de segurança.
+    if (submitting) return;
+
     if (cart.length === 0) {
-      alert('Não há itens no carrinho.');
+      showToast('Não há itens no carrinho.', 'error');
       router.push('/');
       return;
     }
 
     if (!receiverName.trim() || !contact.trim()) {
-      alert('Por favor, preencha o nome e o telefone para contato.');
+      showToast('Por favor, preencha o nome e o telefone para contato.', 'error');
       return;
     }
 
     if (deliveryMethod === 'delivery' && (!street.trim() || !streetNumber.trim() || !neighborhood.trim() || !city.trim())) {
-      alert('Por favor, preencha rua, número, bairro e cidade para a entrega.');
+      showToast('Por favor, preencha rua, número, bairro e cidade para a entrega.', 'error');
       return;
     }
 
@@ -103,16 +115,17 @@ export default function CheckoutClient({
         });
       } else {
         if (body.paymentError) {
-          alert(
-            `Pedido #${body.orderCode} registrado, mas não conseguimos gerar o Pix agora. Combine o pagamento com o restaurante ou tente novamente pela tela de pedidos.`
+          showToast(
+            `Pedido #${body.orderCode} registrado, mas não conseguimos gerar o Pix agora. Combine o pagamento com o restaurante ou tente novamente pela tela de pedidos.`,
+            'error'
           );
         }
-        router.push('/orders');
+        setCompletedOrder({ orderCode: body.orderCode, total });
       }
     } catch (err) {
       console.error('[Sizzle] Erro ao finalizar pedido:', err);
       const message = err instanceof Error ? err.message : 'Não foi possível enviar o pedido.';
-      alert(`${message} Seu carrinho foi mantido — tente novamente.`);
+      showToast(`${message} Seu carrinho foi mantido — tente novamente.`, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -131,6 +144,37 @@ export default function CheckoutClient({
             qrCode={pendingPayment.qrCode}
             qrCodeBase64={pendingPayment.qrCodeBase64}
           />
+        </main>
+      </div>
+    );
+  }
+
+  if (completedOrder) {
+    return (
+      <div className="screen">
+        <header className="app-header-menu">
+          <h1>Pedido confirmado</h1>
+        </header>
+        <main className="app-main-menu">
+          <div className="checkout-form" style={{ textAlign: 'center' }}>
+            <h2 style={{ color: '#43B55C' }}>Pedido #{completedOrder.orderCode} enviado!</h2>
+            <p style={{ color: '#666' }}>
+              O restaurante já recebeu seu pedido e vai começar a preparar.
+              <br />
+              Total: {formatCurrency(completedOrder.total)}
+            </p>
+            <button className="checkout-button" onClick={() => router.push('/orders')}>
+              Ver meus pedidos
+            </button>
+            <button
+              type="button"
+              className="add-to-cart-button"
+              style={{ marginTop: 10 }}
+              onClick={() => router.push('/')}
+            >
+              Voltar para o início
+            </button>
+          </div>
         </main>
       </div>
     );

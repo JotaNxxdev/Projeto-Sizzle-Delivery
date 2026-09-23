@@ -23,6 +23,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     isOpen: true,
     businessHours: DEFAULT_HOURS,
     isOpenNow: true,
+    minOrderValue: 0,
     menu: [
       {
         id: 'seed-1-1',
@@ -56,6 +57,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     isOpen: true,
     businessHours: DEFAULT_HOURS,
     isOpenNow: true,
+    minOrderValue: 0,
     menu: [
       {
         id: 'seed-2-1',
@@ -89,6 +91,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     isOpen: true,
     businessHours: DEFAULT_HOURS,
     isOpenNow: true,
+    minOrderValue: 0,
     menu: [
       {
         id: 'seed-3-1',
@@ -122,6 +125,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     isOpen: true,
     businessHours: DEFAULT_HOURS,
     isOpenNow: true,
+    minOrderValue: 0,
     menu: [
       {
         id: 'seed-4-1',

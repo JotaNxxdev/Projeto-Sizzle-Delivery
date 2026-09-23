@@ -2,19 +2,27 @@
 
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
 
 export default function CartPage() {
   const { cart, updateQuantity, subtotal } = useCart();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const deliveryFee = cart[0]?.deliveryFee ?? 0;
   const total = subtotal + deliveryFee;
+  const minOrderValue = cart[0]?.minOrderValue ?? 0;
+  const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
 
   function handleCheckout() {
     if (cart.length === 0) {
-      alert('Seu carrinho está vazio. Adicione itens para continuar.');
+      showToast('Seu carrinho está vazio. Adicione itens para continuar.', 'error');
+      return;
+    }
+    if (belowMinimum) {
+      showToast(`Pedido mínimo desse restaurante: ${formatCurrency(minOrderValue)}.`, 'error');
       return;
     }
     router.push('/checkout');
@@ -76,7 +84,13 @@ export default function CartPage() {
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
-          <button className="checkout-button" onClick={handleCheckout}>
+          {belowMinimum && (
+            <p className="empty-state" style={{ backgroundColor: '#fdecea', borderRadius: 10, padding: 12 }}>
+              Pedido mínimo desse restaurante: {formatCurrency(minOrderValue)}. Faltam{' '}
+              {formatCurrency(minOrderValue - subtotal)}.
+            </p>
+          )}
+          <button className="checkout-button" onClick={handleCheckout} disabled={belowMinimum}>
             Finalizar Pedido
           </button>
         </div>

@@ -1,6 +1,7 @@
 import { getCurrentProfile } from '@/lib/auth';
 import { getRestaurantReport } from '@/lib/restaurant-data';
 import { formatCurrency } from '@/lib/format';
+import ExportCsvButton from './ExportCsvButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,19 @@ export default async function RestaurantReportsPage() {
 
   return (
     <div>
-      <h2>Relatórios</h2>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 10,
+          marginBottom: 15,
+        }}
+      >
+        <h2 style={{ marginBottom: 0 }}>Relatórios</h2>
+        <ExportCsvButton report={report} />
+      </div>
 
       <div className="report-grid">
         <div className="report-card">

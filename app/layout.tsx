@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/contexts/CartContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import BottomNav from '@/components/BottomNav';
 
 const poppins = Poppins({
@@ -26,10 +27,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <CartProvider>
-          <div id="app-container">{children}</div>
-          <BottomNav />
-        </CartProvider>
+        <ToastProvider>
+          <CartProvider>
+            <div id="app-container">{children}</div>
+            <BottomNav />
+          </CartProvider>
+        </ToastProvider>
       </body>
     </html>
   );
