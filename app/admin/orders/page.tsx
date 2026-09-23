@@ -21,6 +21,7 @@ export default async function AdminOrdersPage({
       {orders.length === 0 ? (
         <p className="empty-state">Nenhum pedido ainda.</p>
       ) : (
+        <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
             <tr>
@@ -61,6 +62,7 @@ export default async function AdminOrdersPage({
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

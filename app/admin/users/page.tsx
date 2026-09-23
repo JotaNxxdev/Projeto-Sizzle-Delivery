@@ -25,6 +25,7 @@ export default async function AdminUsersPage({
       {profiles.length === 0 ? (
         <p className="empty-state">Ninguém se cadastrou ainda.</p>
       ) : (
+        <div className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
             <tr>
@@ -55,6 +56,7 @@ export default async function AdminUsersPage({
             ))}
           </tbody>
         </table>
+        </div>
       )}
       <p className="empty-state" style={{ marginTop: 10 }}>
         Promover alguém a &quot;Dono de restaurante&quot; por aqui não vincula nenhum restaurante a ele — use a aba

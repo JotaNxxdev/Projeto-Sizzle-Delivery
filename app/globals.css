@@ -764,13 +764,16 @@ h2 {
     flex-wrap: wrap;
 }
 
-.admin-inline-form input,
+/* :not(radio/checkbox) — esses dois têm aparência própria do navegador;
+   sem essa exclusão, ficam com borda/padding de campo de texto, quebrados. */
+.admin-inline-form input:not([type='checkbox']):not([type='radio']),
 .admin-inline-form select {
     padding: 8px 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 0.85rem;
     font-family: inherit;
+    min-width: 0;
 }
 
 .admin-btn {
@@ -779,4 +782,40 @@ h2 {
     border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+/* Grupo de opções (rádio/checkbox) fora do contexto de admin — usa o
+   mesmo espaçamento, mas sem mexer na aparência nativa do input. */
+.radio-group {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Linha de formulário com duas colunas (ex.: número + complemento) que
+   empilha em telas estreitas em vez de espremer os campos. */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 400px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+}
+
+.admin-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
