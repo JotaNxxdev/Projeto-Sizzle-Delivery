@@ -17,6 +17,8 @@ export interface Restaurant {
   brandColor: string | null;
   description: string | null;
   onlinePaymentEnabled: boolean;
+  isOpen: boolean;
+  openingHours: string | null;
   menu: MenuItem[];
 }
 

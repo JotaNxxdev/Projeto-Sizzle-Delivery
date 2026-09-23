@@ -2,6 +2,7 @@ import { getCurrentProfile } from '@/lib/auth';
 import { getRestaurantSettings } from '@/lib/restaurant-data';
 import RestaurantSettingsForm from './RestaurantSettingsForm';
 import MercadoPagoConnection from './MercadoPagoConnection';
+import StoreStatus from './StoreStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export default async function RestaurantSettingsPage({
     <div>
       {error && <p className="empty-state">{error}</p>}
       {connected && <p className="empty-state">Conta do Mercado Pago conectada com sucesso!</p>}
+      <StoreStatus restaurantId={settings.id} isOpen={settings.isOpen} />
       <MercadoPagoConnection
         restaurantId={settings.id}
         connected={settings.mercadoPagoConnected}

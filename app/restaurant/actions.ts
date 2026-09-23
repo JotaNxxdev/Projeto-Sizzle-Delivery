@@ -44,6 +44,7 @@ export async function updateRestaurantSettings(formData: FormData) {
   const deliveryFee = Number(formData.get('deliveryFee') || 0);
   const brandColor = String(formData.get('brandColor') || '').trim() || null;
   const description = String(formData.get('description') || '').trim() || null;
+  const openingHours = String(formData.get('openingHours') || '').trim() || null;
 
   if (!name || !category || !deliveryTime || !(deliveryFee >= 0)) {
     fail('/restaurant/settings', 'Nome, categoria, tempo de entrega e taxa são obrigatórios.');
@@ -56,6 +57,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     delivery_fee: number;
     brand_color: string | null;
     description: string | null;
+    opening_hours: string | null;
     image_url?: string;
   } = {
     name,
@@ -64,6 +66,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     delivery_fee: deliveryFee,
     brand_color: brandColor,
     description,
+    opening_hours: openingHours,
   };
 
   // Só troca a foto se veio uma nova (o formulário só manda este campo
@@ -78,6 +81,20 @@ export async function updateRestaurantSettings(formData: FormData) {
     console.error('[Sizzle] Erro ao atualizar loja:', error.message);
     fail('/restaurant/settings', 'Não foi possível salvar as informações da loja.');
   }
+
+  revalidatePath('/restaurant/settings');
+  revalidatePath('/');
+  revalidatePath(`/restaurants/${restaurantId}`);
+}
+
+export async function toggleStoreOpen(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const isOpen = formData.get('isOpen') === 'true';
+
+  const { error } = await db.from('restaurants').update({ is_open: isOpen }).eq('id', restaurantId);
+  if (error) fail('/restaurant/settings', 'Não foi possível atualizar essa opção.');
 
   revalidatePath('/restaurant/settings');
   revalidatePath('/');

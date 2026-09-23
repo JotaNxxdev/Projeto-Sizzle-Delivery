@@ -124,10 +124,20 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
               <p className="empty-state">Nenhum restaurante encontrado.</p>
             ) : (
               filteredRestaurants.map((restaurant) => (
-                <Link key={restaurant.id} href={`/restaurants/${restaurant.id}`} className="restaurant-card">
+                <Link
+                  key={restaurant.id}
+                  href={`/restaurants/${restaurant.id}`}
+                  className="restaurant-card"
+                  style={!restaurant.isOpen ? { opacity: 0.6 } : undefined}
+                >
                   <img src={restaurant.image} alt={restaurant.name} />
                   <div className="card-info">
-                    <h3>{restaurant.name}</h3>
+                    <h3>
+                      {restaurant.name}
+                      {!restaurant.isOpen && (
+                        <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (Fechado)</span>
+                      )}
+                    </h3>
                     <p className="details">
                       <i className="fas fa-star rating-icon" aria-hidden="true" /> {restaurant.rating} •{' '}
                       {restaurant.deliveryTime} •{' '}
