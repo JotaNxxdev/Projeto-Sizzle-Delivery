@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getRestaurantById } from '@/lib/restaurants';
 import { getCurrentProfile } from '@/lib/auth';
+import { createPixPayment, isMercadoPagoConfigured } from '@/lib/mercadopago';
 
 interface IncomingItem {
   menuItemId: string;
@@ -111,7 +112,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível salvar os itens do pedido.' }, { status: 500 });
   }
 
-  return NextResponse.json({ orderCode }, { status: 201 });
+  // Sem Mercado Pago configurado, o pedido continua funcionando (fica
+  // registrado como "pending" — combine o pagamento por fora, por enquanto).
+  if (!isMercadoPagoConfigured) {
+    return NextResponse.json({ orderCode, payment: null }, { status: 201 });
+  }
+
+  try {
+    const payment = await createPixPayment({
+      amount: total,
+      description: `Pedido ${orderCode} - ${restaurant.name}`,
+      payerEmail: profile.email,
+      externalReference: orderCode,
+      notificationUrl: `${request.nextUrl.origin}/api/webhooks/mercadopago`,
+    });
+
+    await supabase
+      .from('orders')
+      .update({ mp_payment_id: payment.paymentId, payment_status: payment.status })
+      .eq('id', orderRow.id);
+
+    return NextResponse.json(
+      {
+        orderCode,
+        payment: {
+          id: payment.paymentId,
+          status: payment.status,
+          qrCode: payment.qrCode,
+          qrCodeBase64: payment.qrCodeBase64,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    // O pedido já está salvo — a pessoa só não recebeu o QR Code Pix agora.
+    // Deixamos o pedido como "pending" e ela pode tentar de novo pela tela
+    // de pedidos (ou combinar o pagamento por fora).
+    console.error('[Sizzle] Erro ao criar pagamento Pix:', err);
+    return NextResponse.json({ orderCode, payment: null, paymentError: true }, { status: 201 });
+  }
 }
 
 export async function GET() {
@@ -127,7 +166,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'order_code, restaurant_name, notes, contact_number, delivery_address, status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
+      'order_code, restaurant_name, notes, contact_number, delivery_address, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
     )
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
@@ -144,6 +183,7 @@ export async function GET() {
     contact: order.contact_number,
     address: order.delivery_address,
     status: order.status,
+    paymentStatus: order.payment_status,
     subtotal: Number(order.subtotal),
     deliveryFee: Number(order.delivery_fee),
     total: Number(order.total),

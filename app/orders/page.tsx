@@ -3,12 +3,21 @@
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
-import type { Order } from '@/lib/types';
+import { PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
   'Em Preparação': 'in-progress',
   Entregue: 'delivered',
+};
+
+const PAYMENT_STATUS_CLASS: Record<string, string> = {
+  pending: 'pending',
+  in_process: 'pending',
+  approved: 'delivered',
+  rejected: 'cancelled',
+  cancelled: 'cancelled',
+  refunded: 'cancelled',
 };
 
 export default function OrdersPage() {
@@ -60,6 +69,11 @@ export default function OrdersPage() {
                 <span className={`order-status ${STATUS_CLASS[order.status] ?? ''}`}>{order.status}</span>
               </div>
               <div className="order-details">
+                <p>
+                  <span className={`order-status ${PAYMENT_STATUS_CLASS[order.paymentStatus] ?? 'pending'}`}>
+                    {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
+                  </span>
+                </p>
                 <p>
                   <strong>Restaurante:</strong> {order.restaurantName}
                 </p>
