@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
+import NewOrderNotifier from './NewOrderNotifier';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function RestaurantOwnerLayout({ children }: { children: Re
         <Link href="/restaurant/menu">Cardápio</Link>
         <Link href="/restaurant/settings">Loja</Link>
       </nav>
+      <NewOrderNotifier restaurantId={profile.restaurantId} />
       <main className="app-main-menu">{children}</main>
     </div>
   );
