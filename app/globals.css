@@ -891,3 +891,125 @@ h2 {
     font-size: 0.8rem;
     color: #999;
 }
+
+.new-order-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background-color: #43B55C;
+    color: #fff;
+    padding: 12px 20px;
+    font-weight: 700;
+    flex-wrap: wrap;
+}
+
+.new-order-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.new-order-banner-actions a {
+    color: #fff;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.new-order-banner-actions button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.comanda {
+    max-width: 380px;
+    margin: 20px auto;
+    padding: 20px;
+    font-family: 'Courier New', monospace;
+    background-color: #fff;
+    color: #111;
+}
+
+.comanda h2 {
+    text-align: center;
+    margin: 0 0 4px;
+}
+
+.comanda-code {
+    text-align: center;
+    font-weight: 700;
+    margin: 0;
+}
+
+.comanda hr {
+    border: none;
+    border-top: 1px dashed #999;
+    margin: 12px 0;
+}
+
+.comanda-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.comanda-items li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.comanda-line {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+}
+
+.comanda-total {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.comanda-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.comanda-actions button {
+    background-color: #43B55C;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.comanda-actions a {
+    padding: 10px 20px;
+    color: #666;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+@media print {
+    .app-footer,
+    .no-print {
+        display: none !important;
+    }
+
+    .comanda {
+        margin: 0;
+        max-width: 100%;
+    }
+}

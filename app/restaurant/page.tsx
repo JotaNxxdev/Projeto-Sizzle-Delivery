@@ -121,6 +121,14 @@ export default async function RestaurantOrdersPage({
               <button type="submit" className="quantity-btn admin-btn">
                 Atualizar status
               </button>
+              <a
+                href={`/print/orders/${order.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="quantity-btn admin-btn"
+              >
+                <i className="fas fa-print" aria-hidden="true" /> Imprimir comanda
+              </a>
             </form>
           </div>
         ))

@@ -12,20 +12,62 @@ export interface OwnerOrderRow {
   notes: string | null;
   status: string;
   paymentStatus: string;
+  subtotal: number;
+  deliveryFee: number;
   total: number;
   createdAt: string;
   items: { name: string; price: number; quantity: number }[];
 }
 
+const ORDER_ROW_SELECT =
+  'id, order_code, contact_number, delivery_address, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)';
+
+function mapOrderRow(o: {
+  id: string;
+  order_code: string;
+  contact_number: string;
+  delivery_address: string;
+  receiver_name: string | null;
+  delivery_method: string;
+  payment_method: string;
+  change_for: number | string | null;
+  notes: string | null;
+  status: string;
+  payment_status: string;
+  subtotal: number | string;
+  delivery_fee: number | string;
+  total: number | string;
+  created_at: string;
+  order_items: { menu_item_name: string; price: number | string; quantity: number }[] | null;
+}): OwnerOrderRow {
+  return {
+    id: o.id,
+    orderCode: o.order_code,
+    contact: o.contact_number,
+    address: o.delivery_address,
+    receiverName: o.receiver_name,
+    deliveryMethod: o.delivery_method,
+    paymentMethod: o.payment_method,
+    changeFor: o.change_for != null ? Number(o.change_for) : null,
+    notes: o.notes,
+    status: o.status,
+    paymentStatus: o.payment_status,
+    subtotal: Number(o.subtotal),
+    deliveryFee: Number(o.delivery_fee),
+    total: Number(o.total),
+    createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
+    items: (o.order_items ?? []).map((item) => ({
+      name: item.menu_item_name,
+      price: Number(item.price),
+      quantity: item.quantity,
+    })),
+  };
+}
+
 export async function getOrdersForRestaurant(restaurantId: string, status?: string): Promise<OwnerOrderRow[]> {
   if (!supabase) return [];
 
-  let query = supabase
-    .from('orders')
-    .select(
-      'id, order_code, contact_number, delivery_address, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, total, created_at, order_items(menu_item_name, price, quantity)'
-    )
-    .eq('restaurant_id', restaurantId);
+  let query = supabase.from('orders').select(ORDER_ROW_SELECT).eq('restaurant_id', restaurantId);
 
   if (status) {
     query = query.eq('status', status);
@@ -38,26 +80,22 @@ export async function getOrdersForRestaurant(restaurantId: string, status?: stri
     return [];
   }
 
-  return data.map((o) => ({
-    id: o.id,
-    orderCode: o.order_code,
-    contact: o.contact_number,
-    address: o.delivery_address,
-    receiverName: o.receiver_name,
-    deliveryMethod: o.delivery_method,
-    paymentMethod: o.payment_method,
-    changeFor: o.change_for != null ? Number(o.change_for) : null,
-    notes: o.notes,
-    status: o.status,
-    paymentStatus: o.payment_status,
-    total: Number(o.total),
-    createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
-    items: (o.order_items ?? []).map((item) => ({
-      name: item.menu_item_name,
-      price: Number(item.price),
-      quantity: item.quantity,
-    })),
-  }));
+  return data.map(mapOrderRow);
+}
+
+export async function getOrderForOwner(restaurantId: string, orderId: string): Promise<OwnerOrderRow | null> {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(ORDER_ROW_SELECT)
+    .eq('id', orderId)
+    .eq('restaurant_id', restaurantId)
+    .single();
+
+  if (error || !data) return null;
+
+  return mapOrderRow(data);
 }
 
 export interface RestaurantSettings {
