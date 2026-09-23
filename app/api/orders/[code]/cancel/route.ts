@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   if (!isSupabaseConfigured || !supabase) {
@@ -38,6 +39,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     console.error('[Sizzle] Erro ao cancelar pedido:', error.message);
     return NextResponse.json({ error: 'Não foi possível cancelar o pedido.' }, { status: 500 });
   }
+
+  await logAudit(supabase, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'cancel_order',
+    entity: 'order',
+    entityId: order.id,
+    oldValue: { status: order.status },
+    newValue: { status: 'Cancelado' },
+  });
 
   return NextResponse.json({ success: true });
 }

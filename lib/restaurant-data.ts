@@ -2,6 +2,12 @@ import { supabase } from './supabase';
 import { isWithinBusinessHours } from './business-hours';
 import type { BusinessHours } from './types';
 
+export interface OwnerOrderItemOption {
+  groupName: string;
+  optionName: string;
+  priceDelta: number;
+}
+
 export interface OwnerOrderRow {
   id: string;
   orderCode: string;
@@ -23,33 +29,58 @@ export interface OwnerOrderRow {
   createdAtIso: string;
   courierId: string | null;
   courierName: string | null;
-  items: { name: string; price: number; quantity: number }[];
+  items: { name: string; price: number; quantity: number; options: OwnerOrderItemOption[] }[];
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(id, menu_item_name, price, quantity)';
 
-function mapOrderRow(o: {
-  id: string;
-  order_code: string;
-  contact_number: string;
-  delivery_address: string;
-  reference_point: string | null;
-  receiver_name: string | null;
-  delivery_method: string;
-  payment_method: string;
-  change_for: number | string | null;
-  notes: string | null;
-  status: string;
-  rejection_reason: string | null;
-  payment_status: string;
-  subtotal: number | string;
-  delivery_fee: number | string;
-  total: number | string;
-  created_at: string;
-  courier_id: string | null;
-  order_items: { menu_item_name: string; price: number | string; quantity: number }[] | null;
-}): OwnerOrderRow {
+// Busca os adicionais escolhidos de vários itens de pedido de uma vez
+// (mesmo padrão de busca em lote já usado nesse arquivo).
+async function fetchOptionsByItemId(
+  db: NonNullable<typeof supabase>,
+  orderItemIds: string[]
+): Promise<Map<string, OwnerOrderItemOption[]>> {
+  const result = new Map<string, OwnerOrderItemOption[]>();
+  if (orderItemIds.length === 0) return result;
+
+  const { data } = await db
+    .from('order_item_options')
+    .select('order_item_id, group_name, option_name, price_delta')
+    .in('order_item_id', orderItemIds);
+
+  for (const row of data ?? []) {
+    const list = result.get(row.order_item_id) ?? [];
+    list.push({ groupName: row.group_name, optionName: row.option_name, priceDelta: Number(row.price_delta) });
+    result.set(row.order_item_id, list);
+  }
+  return result;
+}
+
+function mapOrderRow(
+  o: {
+    id: string;
+    order_code: string;
+    contact_number: string;
+    delivery_address: string;
+    reference_point: string | null;
+    receiver_name: string | null;
+    delivery_method: string;
+    payment_method: string;
+    change_for: number | string | null;
+    notes: string | null;
+    status: string;
+    rejection_reason: string | null;
+    payment_status: string;
+    subtotal: number | string;
+    delivery_fee: number | string;
+    total: number | string;
+    created_at: string;
+    courier_id: string | null;
+    order_items: { id: string; menu_item_name: string; price: number | string; quantity: number }[] | null;
+  },
+  optionsByItemId: Map<string, OwnerOrderItemOption[]>
+): OwnerOrderRow {
   return {
     id: o.id,
     orderCode: o.order_code,
@@ -75,6 +106,7 @@ function mapOrderRow(o: {
       name: item.menu_item_name,
       price: Number(item.price),
       quantity: item.quantity,
+      options: optionsByItemId.get(item.id) ?? [],
     })),
   };
 }
@@ -113,7 +145,10 @@ export async function getOrdersForRestaurant(restaurantId: string, status?: stri
     return [];
   }
 
-  return attachCourierNames(data.map(mapOrderRow));
+  const orderItemIds = data.flatMap((o) => (o.order_items ?? []).map((item) => item.id));
+  const optionsByItemId = await fetchOptionsByItemId(supabase, orderItemIds);
+
+  return attachCourierNames(data.map((row) => mapOrderRow(row, optionsByItemId)));
 }
 
 export async function getOrderForOwner(restaurantId: string, orderId: string): Promise<OwnerOrderRow | null> {
@@ -128,7 +163,10 @@ export async function getOrderForOwner(restaurantId: string, orderId: string): P
 
   if (error || !data) return null;
 
-  const [order] = await attachCourierNames([mapOrderRow(data)]);
+  const orderItemIds = (data.order_items ?? []).map((item) => item.id);
+  const optionsByItemId = await fetchOptionsByItemId(supabase, orderItemIds);
+
+  const [order] = await attachCourierNames([mapOrderRow(data, optionsByItemId)]);
   return order;
 }
 
@@ -234,6 +272,10 @@ export interface RestaurantReport {
   revenueTotal: number;
   averageTicket: number;
   topItems: { name: string; quantity: number; revenue: number }[];
+  paymentMethodBreakdown: { method: string; orders: number; revenue: number }[];
+  cancelledOrders: number;
+  rejectedOrders: number;
+  totalDiscountGiven: number;
 }
 
 const EMPTY_REPORT: RestaurantReport = {
@@ -247,6 +289,10 @@ const EMPTY_REPORT: RestaurantReport = {
   revenueTotal: 0,
   averageTicket: 0,
   topItems: [],
+  paymentMethodBreakdown: [],
+  cancelledOrders: 0,
+  rejectedOrders: 0,
+  totalDiscountGiven: 0,
 };
 
 // Pedidos com pagamento recusado/cancelado não entram nas somas de receita.
@@ -257,7 +303,9 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
 
   const { data, error } = await supabase
     .from('orders')
-    .select('total, payment_status, created_at, order_items(menu_item_name, price, quantity)')
+    .select(
+      'total, payment_status, payment_method, status, discount_amount, created_at, order_items(menu_item_name, price, quantity)'
+    )
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
     .limit(1000);
@@ -274,6 +322,7 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const itemStats = new Map<string, { quantity: number; revenue: number }>();
+  const paymentStats = new Map<string, { orders: number; revenue: number }>();
 
   let ordersToday = 0;
   let revenueToday = 0;
@@ -283,8 +332,14 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
   let revenueMonth = 0;
   let ordersTotal = 0;
   let revenueTotal = 0;
+  let cancelledOrders = 0;
+  let rejectedOrders = 0;
+  let totalDiscountGiven = 0;
 
   for (const order of data) {
+    if (order.status === 'Cancelado') cancelledOrders += 1;
+    if (order.status === 'Recusado') rejectedOrders += 1;
+
     if (EXCLUDED_PAYMENT_STATUSES.has(order.payment_status)) continue;
 
     const total = Number(order.total);
@@ -292,6 +347,12 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
 
     ordersTotal += 1;
     revenueTotal += total;
+    totalDiscountGiven += Number(order.discount_amount);
+
+    const paymentEntry = paymentStats.get(order.payment_method) ?? { orders: 0, revenue: 0 };
+    paymentEntry.orders += 1;
+    paymentEntry.revenue += total;
+    paymentStats.set(order.payment_method, paymentEntry);
 
     if (createdAt >= startOfMonth) {
       ordersMonth += 1;
@@ -319,6 +380,10 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 5);
 
+  const paymentMethodBreakdown = Array.from(paymentStats.entries())
+    .map(([method, stats]) => ({ method, ...stats }))
+    .sort((a, b) => b.revenue - a.revenue);
+
   return {
     ordersToday,
     revenueToday,
@@ -330,6 +395,10 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
     revenueTotal,
     averageTicket: ordersTotal > 0 ? revenueTotal / ordersTotal : 0,
     topItems,
+    paymentMethodBreakdown,
+    cancelledOrders,
+    rejectedOrders,
+    totalDiscountGiven,
   };
 }
 
@@ -355,4 +424,58 @@ export async function getCouriersForRestaurant(restaurantId: string): Promise<Co
   }
 
   return data.map((courier) => ({ id: courier.id, email: courier.email, fullName: courier.full_name }));
+}
+
+export interface CouponRow {
+  id: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minOrderValue: number;
+  maxDiscount: number | null;
+  expiresAt: string | null;
+  usageLimit: number | null;
+  usageLimitPerCustomer: number;
+  active: boolean;
+  timesUsed: number;
+}
+
+export async function getCouponsForRestaurant(restaurantId: string): Promise<CouponRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('coupons')
+    .select(
+      'id, code, discount_type, discount_value, min_order_value, max_discount, expires_at, usage_limit, usage_limit_per_customer, active'
+    )
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar cupons:', error?.message);
+    return [];
+  }
+
+  const couponIds = data.map((c) => c.id);
+  const usageByCoupon = new Map<string, number>();
+  if (couponIds.length > 0) {
+    const { data: redemptions } = await supabase.from('coupon_redemptions').select('coupon_id').in('coupon_id', couponIds);
+    for (const redemption of redemptions ?? []) {
+      usageByCoupon.set(redemption.coupon_id, (usageByCoupon.get(redemption.coupon_id) ?? 0) + 1);
+    }
+  }
+
+  return data.map((c) => ({
+    id: c.id,
+    code: c.code,
+    discountType: c.discount_type,
+    discountValue: Number(c.discount_value),
+    minOrderValue: Number(c.min_order_value),
+    maxDiscount: c.max_discount != null ? Number(c.max_discount) : null,
+    expiresAt: c.expires_at,
+    usageLimit: c.usage_limit,
+    usageLimitPerCustomer: c.usage_limit_per_customer,
+    active: c.active,
+    timesUsed: usageByCoupon.get(c.id) ?? 0,
+  }));
 }

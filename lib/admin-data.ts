@@ -165,3 +165,40 @@ export async function listAllProfiles(): Promise<ProfileRow[]> {
     restaurantId: p.restaurant_id,
   }));
 }
+
+export interface AuditLogRow {
+  id: string;
+  userEmail: string | null;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  oldValue: unknown;
+  newValue: unknown;
+  createdAt: string;
+}
+
+export async function listAuditLogs(): Promise<AuditLogRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('id, user_email, action, entity, entity_id, old_value, new_value, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar logs de auditoria:', error?.message);
+    return [];
+  }
+
+  return data.map((log) => ({
+    id: log.id,
+    userEmail: log.user_email,
+    action: log.action,
+    entity: log.entity,
+    entityId: log.entity_id,
+    oldValue: log.old_value,
+    newValue: log.new_value,
+    createdAt: new Date(log.created_at).toLocaleString('pt-BR'),
+  }));
+}

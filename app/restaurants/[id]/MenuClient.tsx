@@ -1,14 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/format';
-import type { MenuItem, Restaurant } from '@/lib/types';
+import MenuItemOptionsModal from '@/components/MenuItemOptionsModal';
+import type { MenuItem, Restaurant, SelectedOption } from '@/lib/types';
 
 export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
   const { addItem } = useCart();
   const router = useRouter();
+  const [optionsModalItem, setOptionsModalItem] = useState<MenuItem | null>(null);
 
   const groupedMenu = useMemo(() => {
     const groups = new Map<string, MenuItem[]>();
@@ -20,22 +22,42 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
     return Array.from(groups.entries());
   }, [restaurant.menu]);
 
-  function handleAdd(item: MenuItem) {
+  function addToCart(item: MenuItem, selectedOptions: SelectedOption[], unitPrice: number) {
+    // O cartItemId identifica a combinação item + adicionais escolhidos, pra
+    // duas escolhas diferentes do mesmo item virarem linhas separadas no carrinho.
+    const cartItemId =
+      selectedOptions.length === 0
+        ? item.id
+        : `${item.id}:${selectedOptions
+            .map((o) => o.valueId)
+            .sort()
+            .join(',')}`;
+
     const { blocked } = addItem({
+      cartItemId,
       menuItemId: item.id,
       name: item.name,
-      price: item.price,
+      price: unitPrice,
       image: item.image,
       restaurantId: restaurant.id,
       restaurantName: restaurant.name,
       deliveryFee: restaurant.deliveryFee,
       onlinePaymentEnabled: restaurant.onlinePaymentEnabled,
       minOrderValue: restaurant.minOrderValue,
+      selectedOptions,
     });
 
     if (!blocked) {
       router.push('/cart');
     }
+  }
+
+  function handleAdd(item: MenuItem) {
+    if (item.optionGroups.length > 0) {
+      setOptionsModalItem(item);
+      return;
+    }
+    addToCart(item, [], item.price);
   }
 
   if (restaurant.menu.length === 0) {
@@ -69,6 +91,17 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
           ))}
         </section>
       ))}
+
+      {optionsModalItem && (
+        <MenuItemOptionsModal
+          item={optionsModalItem}
+          onClose={() => setOptionsModalItem(null)}
+          onConfirm={(selectedOptions, unitPrice) => {
+            addToCart(optionsModalItem, selectedOptions, unitPrice);
+            setOptionsModalItem(null);
+          }}
+        />
+      )}
     </>
   );
 }

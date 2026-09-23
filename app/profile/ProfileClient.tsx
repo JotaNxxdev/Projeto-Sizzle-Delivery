@@ -149,7 +149,7 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
             <a href="/orders">Histórico de Pedidos</a>
           </li>
           <li>
-            <a href="#">Meus Endereços</a>
+            <a href="/profile/addresses">Meus Endereços</a>
           </li>
           <li>
             <a href="#">Configurações</a>

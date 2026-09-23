@@ -3,11 +3,13 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getRestaurantById } from '@/lib/restaurants';
 import { getCurrentProfile } from '@/lib/auth';
 import { createPixPayment } from '@/lib/mercadopago';
+import { validateCoupon } from '@/lib/coupons';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
 
 interface IncomingItem {
   menuItemId: string;
   quantity: number;
+  selectedValueIds?: string[];
 }
 
 interface CreateOrderBody {
@@ -25,6 +27,7 @@ interface CreateOrderBody {
   referencePoint?: string;
   paymentMethod?: PaymentMethod;
   changeFor?: number | null;
+  couponCode?: string;
 }
 
 function composeAddress(body: CreateOrderBody): string {
@@ -92,21 +95,51 @@ export async function POST(request: NextRequest) {
   }
 
   // Nunca confiamos em preços vindos do cliente: recalculamos tudo a partir
-  // do cardápio carregado no servidor, para o pedido não poder ser adulterado.
+  // do cardápio carregado no servidor (inclusive os adicionais escolhidos),
+  // para o pedido não poder ser adulterado.
   let subtotal = 0;
-  const resolvedItems: { name: string; price: number; quantity: number; image: string }[] = [];
+  const resolvedItems: {
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+    options: { groupName: string; optionName: string; priceDelta: number }[];
+  }[] = [];
 
   for (const incoming of items) {
     const menuItem = restaurant.menu.find((item) => item.id === incoming.menuItemId);
     if (!menuItem || !Number.isInteger(incoming.quantity) || incoming.quantity <= 0) {
       return NextResponse.json({ error: 'Item do pedido inválido.' }, { status: 400 });
     }
-    subtotal += menuItem.price * incoming.quantity;
+
+    const selectedValueIds = Array.isArray(incoming.selectedValueIds) ? incoming.selectedValueIds : [];
+    const resolvedOptions: { groupName: string; optionName: string; priceDelta: number }[] = [];
+    let optionsPriceDelta = 0;
+
+    for (const group of menuItem.optionGroups) {
+      const selectedInGroup = group.values.filter((value) => selectedValueIds.includes(value.id));
+      if (selectedInGroup.length < group.minSelections || selectedInGroup.length > group.maxSelections) {
+        return NextResponse.json(
+          {
+            error: `Selecione entre ${group.minSelections} e ${group.maxSelections} opção(ões) em "${group.name}" para ${menuItem.name}.`,
+          },
+          { status: 400 }
+        );
+      }
+      for (const value of selectedInGroup) {
+        resolvedOptions.push({ groupName: group.name, optionName: value.name, priceDelta: value.priceDelta });
+        optionsPriceDelta += value.priceDelta;
+      }
+    }
+
+    const unitPrice = menuItem.price + optionsPriceDelta;
+    subtotal += unitPrice * incoming.quantity;
     resolvedItems.push({
       name: menuItem.name,
-      price: menuItem.price,
+      price: unitPrice,
       quantity: incoming.quantity,
       image: menuItem.image,
+      options: resolvedOptions,
     });
   }
 
@@ -117,8 +150,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Revalida o cupom de novo aqui (nunca confia no desconto calculado pelo
+  // navegador, mesmo que a pré-visualização já tenha validado antes).
+  let discountAmount = 0;
+  let appliedCouponId: string | null = null;
+  const couponCode = body.couponCode?.trim();
+  const isSeedRestaurant = restaurant.id.startsWith('seed-');
+  if (couponCode && !isSeedRestaurant) {
+    const couponResult = await validateCoupon(restaurant.id, couponCode, subtotal, profile.id);
+    if (!couponResult.valid) {
+      return NextResponse.json({ error: couponResult.error || 'Cupom inválido.' }, { status: 400 });
+    }
+    discountAmount = couponResult.discount ?? 0;
+    appliedCouponId = couponResult.couponId ?? null;
+  }
+
   const deliveryFee = deliveryMethod === 'pickup' ? 0 : restaurant.deliveryFee;
-  const total = subtotal + deliveryFee;
+  const total = subtotal - discountAmount + deliveryFee;
   const orderCode = `PED-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
   const changeFor =
     paymentMethod === 'cash' && typeof body.changeFor === 'number' && body.changeFor > total ? body.changeFor : null;
@@ -127,7 +175,7 @@ export async function POST(request: NextRequest) {
     .from('orders')
     .insert({
       order_code: orderCode,
-      restaurant_id: restaurant.id.startsWith('seed-') ? null : restaurant.id,
+      restaurant_id: isSeedRestaurant ? null : restaurant.id,
       restaurant_name: restaurant.name,
       contact_number: contact.trim(),
       delivery_address: composeAddress(body),
@@ -145,6 +193,8 @@ export async function POST(request: NextRequest) {
       status: 'Pendente',
       subtotal,
       delivery_fee: deliveryFee,
+      coupon_code: appliedCouponId ? couponCode!.toUpperCase() : null,
+      discount_amount: discountAmount,
       total,
       user_id: profile.id,
     })
@@ -156,19 +206,51 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível salvar o pedido.' }, { status: 500 });
   }
 
-  const { error: itemsError } = await supabase.from('order_items').insert(
-    resolvedItems.map((item) => ({
+  if (appliedCouponId) {
+    const { error: redemptionError } = await supabase.from('coupon_redemptions').insert({
+      coupon_id: appliedCouponId,
       order_id: orderRow.id,
-      menu_item_name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      image_url: item.image,
-    }))
-  );
+      user_id: profile.id,
+      discount_applied: discountAmount,
+    });
+    if (redemptionError) {
+      console.error('[Sizzle] Erro ao registrar uso do cupom:', redemptionError.message);
+    }
+  }
 
-  if (itemsError) {
-    console.error('[Sizzle] Erro ao salvar itens do pedido:', itemsError.message);
-    return NextResponse.json({ error: 'Não foi possível salvar os itens do pedido.' }, { status: 500 });
+  // Insere item por item (em vez de um insert em lote) pra conseguir o id de
+  // cada order_item de volta e gravar seus adicionais como snapshot.
+  for (const item of resolvedItems) {
+    const { data: insertedItem, error: itemError } = await supabase
+      .from('order_items')
+      .insert({
+        order_id: orderRow.id,
+        menu_item_name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image_url: item.image,
+      })
+      .select('id')
+      .single();
+
+    if (itemError || !insertedItem) {
+      console.error('[Sizzle] Erro ao salvar item do pedido:', itemError?.message);
+      return NextResponse.json({ error: 'Não foi possível salvar os itens do pedido.' }, { status: 500 });
+    }
+
+    if (item.options.length > 0) {
+      const { error: optionsError } = await supabase.from('order_item_options').insert(
+        item.options.map((option) => ({
+          order_item_id: insertedItem.id,
+          group_name: option.groupName,
+          option_name: option.optionName,
+          price_delta: option.priceDelta,
+        }))
+      );
+      if (optionsError) {
+        console.error('[Sizzle] Erro ao salvar adicionais do item:', optionsError.message);
+      }
+    }
   }
 
   if (paymentMethod !== 'pix') {
@@ -238,7 +320,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
+      'id, order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, coupon_code, discount_amount, total, created_at, order_items(id, menu_item_name, price, quantity)'
     )
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
@@ -246,6 +328,36 @@ export async function GET() {
   if (error) {
     console.error('[Sizzle] Erro ao buscar pedidos:', error.message);
     return NextResponse.json({ error: 'Não foi possível buscar os pedidos.' }, { status: 500 });
+  }
+
+  // Busca as avaliações já feitas por esse usuário de uma vez, em vez de
+  // uma query por pedido, e junta em memória pelo order_id.
+  const orderIds = (data ?? []).map((order) => order.id);
+  const reviewByOrderId = new Map<string, { rating: number; comment: string | null; restaurant_reply: string | null }>();
+  if (orderIds.length > 0) {
+    const { data: reviewRows } = await supabase
+      .from('reviews')
+      .select('order_id, rating, comment, restaurant_reply')
+      .in('order_id', orderIds);
+    for (const review of reviewRows ?? []) {
+      reviewByOrderId.set(review.order_id, review);
+    }
+  }
+
+  // Idem para os adicionais escolhidos em cada item — uma busca em lote em
+  // vez de uma por item.
+  const orderItemIds = (data ?? []).flatMap((order) => (order.order_items ?? []).map((item) => item.id));
+  const optionsByItemId = new Map<string, { group_name: string; option_name: string; price_delta: number }[]>();
+  if (orderItemIds.length > 0) {
+    const { data: optionRows } = await supabase
+      .from('order_item_options')
+      .select('order_item_id, group_name, option_name, price_delta')
+      .in('order_item_id', orderItemIds);
+    for (const row of optionRows ?? []) {
+      const list = optionsByItemId.get(row.order_item_id) ?? [];
+      list.push(row);
+      optionsByItemId.set(row.order_item_id, list);
+    }
   }
 
   const orders = (data ?? []).map((order) => ({
@@ -271,13 +383,27 @@ export async function GET() {
     paymentStatus: order.payment_status,
     subtotal: Number(order.subtotal),
     deliveryFee: Number(order.delivery_fee),
+    couponCode: order.coupon_code,
+    discountAmount: Number(order.discount_amount),
     total: Number(order.total),
     date: new Date(order.created_at).toLocaleString('pt-BR'),
     items: (order.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),
       quantity: item.quantity,
+      options: (optionsByItemId.get(item.id) ?? []).map((o) => ({
+        groupName: o.group_name,
+        optionName: o.option_name,
+        priceDelta: Number(o.price_delta),
+      })),
     })),
+    review: reviewByOrderId.has(order.id)
+      ? {
+          rating: reviewByOrderId.get(order.id)!.rating,
+          comment: reviewByOrderId.get(order.id)!.comment,
+          restaurantReply: reviewByOrderId.get(order.id)!.restaurant_reply,
+        }
+      : null,
   }));
 
   return NextResponse.json({ orders });

@@ -112,6 +112,9 @@ export default async function RestaurantOrdersPage({
                 {order.items.map((item, index) => (
                   <li key={index}>
                     {item.quantity}x {item.name} ({formatCurrency(item.price)})
+                    {item.options.length > 0 && (
+                      <span style={{ color: '#666' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
+                    )}
                   </li>
                 ))}
               </ul>

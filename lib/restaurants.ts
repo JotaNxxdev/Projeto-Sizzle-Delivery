@@ -1,6 +1,8 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { SEED_RESTAURANTS } from './seed-data';
 import { isWithinBusinessHours } from './business-hours';
+import { getRestaurantRatingAverages, type RatingAverage } from './reviews';
+import { getOptionGroupsForMenuItems } from './menu-options';
 import type { BusinessHours, Restaurant } from './types';
 
 interface MenuItemRow {
@@ -31,15 +33,19 @@ interface RestaurantRow {
   menu_items: MenuItemRow[] | null;
 }
 
-function mapRestaurant(row: RestaurantRow): Restaurant {
+function mapRestaurant(row: RestaurantRow, ratingAverages: Map<string, RatingAverage>): Restaurant {
   const isOpen = row.is_open;
   const businessHours = row.business_hours;
+  const ratingInfo = ratingAverages.get(row.id);
 
   return {
     id: row.id,
     name: row.name,
     category: row.category,
-    rating: Number(row.rating),
+    // Usa a média das avaliações reais quando já existe alguma; caso
+    // contrário mantém a nota estática cadastrada pelo dono/seed.
+    rating: ratingInfo ? Number(ratingInfo.average.toFixed(1)) : Number(row.rating),
+    reviewCount: ratingInfo?.count ?? 0,
     deliveryTime: row.delivery_time,
     deliveryFee: Number(row.delivery_fee),
     image: row.image_url ?? '',
@@ -63,6 +69,7 @@ function mapRestaurant(row: RestaurantRow): Restaurant {
         price: Number(item.price),
         image: item.image_url ?? '',
         category: item.category,
+        optionGroups: [], // preenchido depois, em getRestaurants, com uma busca em lote
       })),
   };
 }
@@ -72,12 +79,15 @@ export async function getRestaurants(): Promise<Restaurant[]> {
     return SEED_RESTAURANTS;
   }
 
-  const { data, error } = await supabase
-    .from('restaurants')
-    .select(
-      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, menu_items(id, name, description, price, image_url, category, active)'
-    )
-    .order('name', { ascending: true });
+  const [{ data, error }, ratingAverages] = await Promise.all([
+    supabase
+      .from('restaurants')
+      .select(
+        'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, menu_items(id, name, description, price, image_url, category, active)'
+      )
+      .order('name', { ascending: true }),
+    getRestaurantRatingAverages(),
+  ]);
 
   if (error) {
     console.error('[Sizzle] Erro ao buscar restaurantes no Supabase:', error.message);
@@ -88,7 +98,19 @@ export async function getRestaurants(): Promise<Restaurant[]> {
     return SEED_RESTAURANTS;
   }
 
-  return (data as unknown as RestaurantRow[]).map(mapRestaurant);
+  const restaurants = (data as unknown as RestaurantRow[]).map((row) => mapRestaurant(row, ratingAverages));
+
+  // Busca os adicionais de todos os itens de uma vez (uma query em lote em
+  // vez de uma por item) e liga cada grupo ao item correspondente.
+  const allItemIds = restaurants.flatMap((restaurant) => restaurant.menu.map((item) => item.id));
+  const optionGroupsByItem = await getOptionGroupsForMenuItems(allItemIds);
+  for (const restaurant of restaurants) {
+    for (const item of restaurant.menu) {
+      item.optionGroups = optionGroupsByItem.get(item.id) ?? [];
+    }
+  }
+
+  return restaurants;
 }
 
 export async function getRestaurantById(id: string): Promise<Restaurant | null> {

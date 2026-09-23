@@ -8,7 +8,7 @@ const STORAGE_KEY = 'sizzle_cart';
 interface CartContextValue {
   cart: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => { blocked: boolean };
-  updateQuantity: (menuItemId: string, delta: number) => void;
+  updateQuantity: (cartItemId: string, delta: number) => void;
   clearCart: () => void;
   subtotal: number;
 }
@@ -48,10 +48,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     setCart((prev) => {
-      const existing = prev.find((cartItem) => cartItem.menuItemId === item.menuItemId);
+      const existing = prev.find((cartItem) => cartItem.cartItemId === item.cartItemId);
       if (existing) {
         return prev.map((cartItem) =>
-          cartItem.menuItemId === item.menuItemId
+          cartItem.cartItemId === item.cartItemId
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
@@ -62,10 +62,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return { blocked: false };
   }
 
-  function updateQuantity(menuItemId: string, delta: number) {
+  function updateQuantity(cartItemId: string, delta: number) {
     setCart((prev) =>
       prev
-        .map((item) => (item.menuItemId === menuItemId ? { ...item, quantity: item.quantity + delta } : item))
+        .map((item) => (item.cartItemId === cartItemId ? { ...item, quantity: item.quantity + delta } : item))
         .filter((item) => item.quantity > 0)
     );
   }

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
+import { logAudit } from '@/lib/audit';
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
@@ -50,7 +51,7 @@ export async function createRestaurant(formData: FormData) {
 }
 
 export async function assignOwner(formData: FormData) {
-  const { db } = await requireAdmin();
+  const { profile, db } = await requireAdmin();
 
   const restaurantId = String(formData.get('restaurantId') || '');
   const ownerEmail = String(formData.get('ownerEmail') || '').trim().toLowerCase();
@@ -87,12 +88,21 @@ export async function assignOwner(formData: FormData) {
     fail('/admin/restaurants', 'Restaurante vinculado, mas não foi possível atualizar o papel do usuário.');
   }
 
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'assign_owner',
+    entity: 'restaurant',
+    entityId: restaurantId,
+    newValue: { ownerEmail },
+  });
+
   revalidatePath('/admin/restaurants');
   revalidatePath('/admin/users');
 }
 
 export async function removeOwner(formData: FormData) {
-  const { db } = await requireAdmin();
+  const { profile, db } = await requireAdmin();
 
   const restaurantId = String(formData.get('restaurantId') || '');
   const ownerId = String(formData.get('ownerId') || '');
@@ -103,12 +113,21 @@ export async function removeOwner(formData: FormData) {
     await db.from('profiles').update({ role: 'customer', restaurant_id: null }).eq('id', ownerId);
   }
 
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'remove_owner',
+    entity: 'restaurant',
+    entityId: restaurantId,
+    oldValue: { ownerId },
+  });
+
   revalidatePath('/admin/restaurants');
   revalidatePath('/admin/users');
 }
 
 export async function updateOrderStatusAsAdmin(formData: FormData) {
-  const { db } = await requireAdmin();
+  const { profile, db } = await requireAdmin();
 
   const orderId = String(formData.get('orderId') || '');
   const status = String(formData.get('status') || '');
@@ -117,11 +136,20 @@ export async function updateOrderStatusAsAdmin(formData: FormData) {
   const { error } = await db.from('orders').update({ status }).eq('id', orderId);
   if (error) fail('/admin/orders', 'Não foi possível atualizar o status.');
 
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'update_status',
+    entity: 'order',
+    entityId: orderId,
+    newValue: { status },
+  });
+
   revalidatePath('/admin/orders');
 }
 
 export async function updateUserRole(formData: FormData) {
-  const { db } = await requireAdmin();
+  const { profile, db } = await requireAdmin();
 
   const userId = String(formData.get('userId') || '');
   const role = String(formData.get('role') || '');
@@ -136,6 +164,15 @@ export async function updateUserRole(formData: FormData) {
   } else {
     await db.from('profiles').update({ role }).eq('id', userId);
   }
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'update_role',
+    entity: 'profile',
+    entityId: userId,
+    newValue: { role },
+  });
 
   revalidatePath('/admin/users');
   revalidatePath('/admin/restaurants');
