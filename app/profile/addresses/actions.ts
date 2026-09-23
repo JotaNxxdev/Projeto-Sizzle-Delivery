@@ -52,7 +52,10 @@ export async function createAddress(formData: FormData) {
     is_default: makeDefault,
   });
 
-  if (error) fail('Não foi possível salvar o endereço.');
+  if (error) {
+    console.error('[Sizzle] Erro ao salvar endereço:', error.message, error.code);
+    fail('Não foi possível salvar o endereço.');
+  }
 
   revalidatePath('/profile/addresses');
 }
@@ -64,7 +67,10 @@ export async function deleteAddress(formData: FormData) {
   if (!addressId) fail('Endereço é obrigatório.');
 
   const { error } = await db.from('addresses').delete().eq('id', addressId).eq('user_id', profile.id);
-  if (error) fail('Não foi possível excluir o endereço.');
+  if (error) {
+    console.error('[Sizzle] Erro ao excluir endereço:', error.message, error.code);
+    fail('Não foi possível excluir o endereço.');
+  }
 
   revalidatePath('/profile/addresses');
 }
@@ -81,7 +87,10 @@ export async function setDefaultAddress(formData: FormData) {
     .update({ is_default: true })
     .eq('id', addressId)
     .eq('user_id', profile.id);
-  if (error) fail('Não foi possível definir o endereço padrão.');
+  if (error) {
+    console.error('[Sizzle] Erro ao definir endereço padrão:', error.message, error.code);
+    fail('Não foi possível definir o endereço padrão.');
+  }
 
   revalidatePath('/profile/addresses');
 }
