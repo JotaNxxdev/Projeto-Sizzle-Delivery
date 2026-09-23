@@ -510,7 +510,10 @@ h2 {
     color: #333;
 }
 
-.form-group input,
+/* :not(radio/checkbox) — sem essa exclusão, um rádio/checkbox dentro de
+   um .form-group (ex.: "Forma de entrega") vira largura 100%, esticando
+   o círculo nativo e espremendo o texto ao lado dele. */
+.form-group input:not([type='checkbox']):not([type='radio']),
 .form-group textarea {
     width: 100%;
     padding: 12px;
@@ -520,7 +523,7 @@ h2 {
     font-family: inherit;
 }
 
-.form-group input:focus,
+.form-group input:not([type='checkbox']):not([type='radio']):focus,
 .form-group textarea:focus {
     outline: none;
     border-color: #43B55C;
