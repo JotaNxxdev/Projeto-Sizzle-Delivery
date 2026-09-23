@@ -16,6 +16,7 @@ export interface Restaurant {
   image: string;
   brandColor: string | null;
   description: string | null;
+  onlinePaymentEnabled: boolean;
   menu: MenuItem[];
 }
 
@@ -28,6 +29,7 @@ export interface CartItem {
   restaurantId: string;
   restaurantName: string;
   deliveryFee: number;
+  onlinePaymentEnabled: boolean;
 }
 
 export interface OrderItem {
@@ -54,6 +56,30 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   in_process: 'Pagamento em análise',
 };
 
+export type DeliveryMethod = 'delivery' | 'pickup';
+
+export const DELIVERY_METHOD_LABEL: Record<DeliveryMethod, string> = {
+  delivery: 'Entrega',
+  pickup: 'Retirada no local',
+};
+
+export type PaymentMethod = 'pix' | 'cash' | 'card';
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  pix: 'Pix',
+  cash: 'Dinheiro',
+  card: 'Cartão na entrega',
+};
+
+export interface OrderAddress {
+  street: string | null;
+  streetNumber: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  referencePoint: string | null;
+}
+
 export interface Order {
   id: string;
   restaurantName: string;
@@ -61,6 +87,11 @@ export interface Order {
   notes: string | null;
   contact: string;
   address: string;
+  receiverName: string | null;
+  addressDetails: OrderAddress;
+  deliveryMethod: DeliveryMethod;
+  paymentMethod: PaymentMethod;
+  changeFor: number | null;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   subtotal: number;

@@ -13,6 +13,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     image: '/unnamed.png',
     brandColor: null,
     description: null,
+    onlinePaymentEnabled: false,
     menu: [
       {
         id: 'seed-1-1',
@@ -40,6 +41,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     image: '/express.png',
     brandColor: null,
     description: null,
+    onlinePaymentEnabled: false,
     menu: [
       {
         id: 'seed-2-1',
@@ -67,6 +69,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     image: '/kori.png',
     brandColor: null,
     description: null,
+    onlinePaymentEnabled: false,
     menu: [
       {
         id: 'seed-3-1',
@@ -94,6 +97,7 @@ export const SEED_RESTAURANTS: Restaurant[] = [
     image: '/unnamed (1).png',
     brandColor: null,
     description: null,
+    onlinePaymentEnabled: false,
     menu: [
       {
         id: 'seed-4-1',
