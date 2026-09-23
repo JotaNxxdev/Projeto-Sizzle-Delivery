@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-const PROTECTED_PREFIXES = ['/admin', '/restaurant', '/checkout', '/orders', '/profile', '/print'];
+const PROTECTED_PREFIXES = ['/admin', '/restaurant', '/checkout', '/orders', '/profile', '/print', '/courier'];
 
 // Confere limite de segmento de rota: "/restaurant" não pode bater com
 // "/restaurants/seed-1" (a página pública de cardápio), só com "/restaurant"

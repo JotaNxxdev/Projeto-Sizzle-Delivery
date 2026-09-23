@@ -68,6 +68,9 @@ function LoginForm() {
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20 }}>
+          <Link href="/forgot-password">Esqueci minha senha</Link>
+        </p>
+        <p style={{ textAlign: 'center', marginTop: 10 }}>
           Não tem conta? <Link href="/signup">Cadastre-se</Link>
         </p>
       </main>

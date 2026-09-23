@@ -203,3 +203,84 @@ export async function deleteMenuItem(formData: FormData) {
 
   revalidatePath('/restaurant/menu');
 }
+
+export async function inviteCourier(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  if (!email) fail('/restaurant/couriers', 'E-mail é obrigatório.');
+
+  const { data: courierProfile, error: findError } = await db
+    .from('profiles')
+    .select('id, role, restaurant_id')
+    .eq('email', email)
+    .single();
+
+  if (findError || !courierProfile) {
+    fail('/restaurant/couriers', 'Nenhum usuário com esse e-mail. Peça pra pessoa criar conta em /signup primeiro.');
+  }
+
+  if (courierProfile!.role !== 'customer') {
+    fail('/restaurant/couriers', 'Esse e-mail já está vinculado a outro papel no sistema (dono de loja, admin ou já é entregador de outra loja).');
+  }
+
+  const { error: updateError } = await db
+    .from('profiles')
+    .update({ role: 'courier', restaurant_id: restaurantId })
+    .eq('id', courierProfile!.id);
+
+  if (updateError) fail('/restaurant/couriers', 'Não foi possível vincular o entregador.');
+
+  revalidatePath('/restaurant/couriers');
+}
+
+export async function removeCourier(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const courierId = String(formData.get('courierId') || '');
+  if (!courierId) fail('/restaurant/couriers', 'Entregador é obrigatório.');
+
+  const { error } = await db
+    .from('profiles')
+    .update({ role: 'customer', restaurant_id: null })
+    .eq('id', courierId)
+    .eq('restaurant_id', restaurantId)
+    .eq('role', 'courier');
+
+  if (error) fail('/restaurant/couriers', 'Não foi possível remover o entregador.');
+
+  revalidatePath('/restaurant/couriers');
+}
+
+export async function assignCourierToOrder(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const orderId = String(formData.get('orderId') || '');
+  const courierId = String(formData.get('courierId') || '') || null;
+  if (!orderId) fail('/restaurant', 'Pedido é obrigatório.');
+
+  if (courierId) {
+    const { data: courierProfile } = await db
+      .from('profiles')
+      .select('id')
+      .eq('id', courierId)
+      .eq('restaurant_id', restaurantId)
+      .eq('role', 'courier')
+      .single();
+
+    if (!courierProfile) fail('/restaurant', 'Esse entregador não pertence a essa loja.');
+  }
+
+  const { error } = await db
+    .from('orders')
+    .update({ courier_id: courierId })
+    .eq('id', orderId)
+    .eq('restaurant_id', restaurantId);
+
+  if (error) fail('/restaurant', 'Não foi possível atribuir o entregador.');
+
+  revalidatePath('/restaurant');
+}

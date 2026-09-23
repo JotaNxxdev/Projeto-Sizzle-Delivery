@@ -51,9 +51,9 @@ export interface OrderItem {
   quantity: number;
 }
 
-export type OrderStatus = 'Pendente' | 'Em Preparação' | 'Entregue';
+export type OrderStatus = 'Pendente' | 'Em Preparação' | 'Saiu para entrega' | 'Entregue';
 
-export const ORDER_STATUSES: OrderStatus[] = ['Pendente', 'Em Preparação', 'Entregue'];
+export const ORDER_STATUSES: OrderStatus[] = ['Pendente', 'Em Preparação', 'Saiu para entrega', 'Entregue'];
 
 // Status do pagamento Pix (Mercado Pago) — independente do status de
 // preparo/entrega acima. 'pending' quando ainda não configuramos o

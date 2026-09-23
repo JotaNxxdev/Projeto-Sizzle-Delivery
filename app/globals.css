@@ -583,6 +583,10 @@ h2 {
     background-color: #2196f3; /* Azul */
 }
 
+.order-status.out-for-delivery {
+    background-color: #8B5CF6; /* Roxo */
+}
+
 .order-status.delivered {
     background-color: #43B55C; /* Verde */
 }
@@ -886,6 +890,14 @@ h2 {
 .admin-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+}
+
+.qr-scanner-video {
+    width: 100%;
+    max-width: 320px;
+    border-radius: 12px;
+    background: #000;
+    display: block;
 }
 
 .status-filter-tabs {

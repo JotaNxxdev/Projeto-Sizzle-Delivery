@@ -7,6 +7,7 @@ const ROLE_LABEL: Record<string, string> = {
   customer: 'Cliente',
   restaurant_owner: 'Dono de restaurante',
   admin: 'Administrador',
+  courier: 'Entregador',
 };
 
 export default async function AdminUsersPage({
@@ -60,7 +61,8 @@ export default async function AdminUsersPage({
       )}
       <p className="empty-state" style={{ marginTop: 10 }}>
         Promover alguém a &quot;Dono de restaurante&quot; por aqui não vincula nenhum restaurante a ele — use a aba
-        Restaurantes para atribuir o dono pelo e-mail.
+        Restaurantes para atribuir o dono pelo e-mail. Entregadores não são atribuídos por aqui — cada dono de
+        restaurante vincula os próprios entregadores na aba Entregadores do painel dele.
       </p>
     </div>
   );

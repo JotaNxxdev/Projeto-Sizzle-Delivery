@@ -11,6 +11,7 @@ const ROLE_LABEL: Record<CurrentProfile['role'], string> = {
   customer: 'Cliente',
   restaurant_owner: 'Dono de restaurante',
   admin: 'Administrador',
+  courier: 'Entregador',
 };
 
 export default function ProfileClient({ profile }: { profile: CurrentProfile }) {
@@ -75,7 +76,7 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
           <SignOutButton className="checkout-button" />
         </div>
 
-        {(profile.role === 'admin' || profile.role === 'restaurant_owner') && (
+        {(profile.role === 'admin' || profile.role === 'restaurant_owner' || profile.role === 'courier') && (
           <div className="user-input-group" style={{ width: '100%', maxWidth: 400 }}>
             {profile.role === 'admin' && (
               <Link href="/admin" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0, marginBottom: 10 }}>
@@ -85,6 +86,11 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
             {profile.role === 'restaurant_owner' && (
               <Link href="/restaurant" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}>
                 Ir para o Painel do Restaurante
+              </Link>
+            )}
+            {profile.role === 'courier' && (
+              <Link href="/courier" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}>
+                Ir para o Painel do Entregador
               </Link>
             )}
           </div>

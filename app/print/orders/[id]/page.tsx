@@ -86,6 +86,9 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
             <p className="comanda-value">{order.referencePoint}</p>
           </>
         )}
+
+        <p className="comanda-label">Entregador</p>
+        <p className="comanda-value">{order.courierName || 'Não atribuído'}</p>
       </section>
 
       <hr className="comanda-divider" />

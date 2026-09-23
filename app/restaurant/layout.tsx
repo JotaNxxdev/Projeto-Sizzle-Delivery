@@ -36,6 +36,7 @@ export default async function RestaurantOwnerLayout({ children }: { children: Re
         <Link href="/restaurant">Pedidos</Link>
         <Link href="/restaurant/reports">Relatórios</Link>
         <Link href="/restaurant/menu">Cardápio</Link>
+        <Link href="/restaurant/couriers">Entregadores</Link>
         <Link href="/restaurant/settings">Loja</Link>
       </nav>
       <NewOrderNotifier restaurantId={profile.restaurantId} />

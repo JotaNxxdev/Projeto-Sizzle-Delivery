@@ -33,7 +33,7 @@ async function getSessionUser() {
   return user;
 }
 
-export type UserRole = 'customer' | 'restaurant_owner' | 'admin';
+export type UserRole = 'customer' | 'restaurant_owner' | 'admin' | 'courier';
 
 export interface CurrentProfile {
   id: string;
