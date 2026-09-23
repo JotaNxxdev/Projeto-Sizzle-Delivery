@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { isWithinBusinessHours } from './business-hours';
+import type { BusinessHours } from './types';
 
 export interface OwnerOrderRow {
   id: string;
@@ -115,8 +117,9 @@ export interface RestaurantSettings {
   onlinePaymentEnabled: boolean;
   // Só diz SE está conectado — o token em si nunca sai do servidor.
   mercadoPagoConnected: boolean;
-  isOpen: boolean;
-  openingHours: string | null;
+  isOpen: boolean; // toggle manual (pausar/reabrir loja)
+  businessHours: BusinessHours | null;
+  isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
 }
 
 export async function getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
@@ -125,7 +128,7 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, opening_hours'
+      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours'
     )
     .eq('id', restaurantId)
     .single();
@@ -134,6 +137,9 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
     console.error('[Sizzle] Erro ao buscar dados da loja:', error?.message);
     return null;
   }
+
+  const isOpen = data.is_open;
+  const businessHours = data.business_hours as BusinessHours | null;
 
   return {
     id: data.id,
@@ -146,8 +152,9 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
     description: data.description,
     onlinePaymentEnabled: data.online_payment_enabled,
     mercadoPagoConnected: Boolean(data.mp_access_token),
-    isOpen: data.is_open,
-    openingHours: data.opening_hours,
+    isOpen,
+    businessHours,
+    isOpenNow: isOpen && isWithinBusinessHours(businessHours),
   };
 }
 
@@ -157,6 +164,7 @@ export interface OwnerMenuItem {
   description: string | null;
   price: number;
   imageUrl: string | null;
+  category: string;
 }
 
 export async function getMenuItemsForRestaurant(restaurantId: string): Promise<OwnerMenuItem[]> {
@@ -164,8 +172,9 @@ export async function getMenuItemsForRestaurant(restaurantId: string): Promise<O
 
   const { data, error } = await supabase
     .from('menu_items')
-    .select('id, name, description, price, image_url')
+    .select('id, name, description, price, image_url, category')
     .eq('restaurant_id', restaurantId)
+    .order('category', { ascending: true })
     .order('name', { ascending: true });
 
   if (error || !data) {
@@ -179,6 +188,7 @@ export async function getMenuItemsForRestaurant(restaurantId: string): Promise<O
     description: item.description,
     price: Number(item.price),
     imageUrl: item.image_url,
+    category: item.category,
   }));
 }
 

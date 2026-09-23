@@ -299,6 +299,18 @@ h2 {
     overflow-y: auto;
 }
 
+.menu-category + .menu-category {
+    margin-top: 25px;
+}
+
+.menu-category-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #43B55C;
+}
+
 .menu-item {
     background-color: #fff;
     border-radius: 15px;
@@ -826,6 +838,48 @@ h2 {
     .form-row {
         grid-template-columns: 1fr;
         gap: 0;
+    }
+}
+
+.business-hours-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.business-hours-day {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 110px;
+    flex-shrink: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.business-hours-day input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.business-hours-row input[type='time'] {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    flex: 1;
+    min-width: 90px;
+}
+
+@media (max-width: 420px) {
+    .business-hours-day {
+        width: 100%;
     }
 }
 

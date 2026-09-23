@@ -128,13 +128,13 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
                   key={restaurant.id}
                   href={`/restaurants/${restaurant.id}`}
                   className="restaurant-card"
-                  style={!restaurant.isOpen ? { opacity: 0.6 } : undefined}
+                  style={!restaurant.isOpenNow ? { opacity: 0.6 } : undefined}
                 >
                   <img src={restaurant.image} alt={restaurant.name} />
                   <div className="card-info">
                     <h3>
                       {restaurant.name}
-                      {!restaurant.isOpen && (
+                      {!restaurant.isOpenNow && (
                         <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (Fechado)</span>
                       )}
                     </h3>

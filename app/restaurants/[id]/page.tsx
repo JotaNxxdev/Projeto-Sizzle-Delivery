@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getRestaurantById } from '@/lib/restaurants';
+import { formatBusinessHoursSummary } from '@/lib/business-hours';
 import BackButton from '@/components/BackButton';
 import MenuClient from './MenuClient';
 
@@ -12,6 +13,8 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
   if (!restaurant) {
     notFound();
   }
+
+  const hoursSummary = formatBusinessHoursSummary(restaurant.businessHours);
 
   return (
     <div className="screen">
@@ -26,12 +29,12 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
         {restaurant.description && (
           <p style={{ color: '#666', marginTop: 0, marginBottom: 10 }}>{restaurant.description}</p>
         )}
-        {restaurant.openingHours && (
+        {hoursSummary.length > 0 && (
           <p style={{ color: '#666', marginTop: 0, marginBottom: 20, fontSize: '0.9rem' }}>
-            <i className="fas fa-clock" aria-hidden="true" /> {restaurant.openingHours}
+            <i className="fas fa-clock" aria-hidden="true" /> {hoursSummary.join(' • ')}
           </p>
         )}
-        {!restaurant.isOpen && (
+        {!restaurant.isOpenNow && (
           <p className="empty-state" style={{ backgroundColor: '#fdecea', borderRadius: 10, padding: 12 }}>
             Este restaurante está fechado no momento — volte mais tarde.
           </p>
