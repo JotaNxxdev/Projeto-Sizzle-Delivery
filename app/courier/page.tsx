@@ -15,6 +15,8 @@ const STATUS_CLASS: Record<string, string> = {
   'Em Preparação': 'in-progress',
   'Saiu para entrega': 'out-for-delivery',
   Entregue: 'delivered',
+  Recusado: 'cancelled',
+  Cancelado: 'cancelled',
 };
 
 export const dynamic = 'force-dynamic';

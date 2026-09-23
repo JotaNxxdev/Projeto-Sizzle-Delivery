@@ -1,6 +1,7 @@
 import { getCurrentProfile } from '@/lib/auth';
 import { getCouriersForRestaurant } from '@/lib/restaurant-data';
 import { inviteCourier, removeCourier } from '../actions';
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,9 +48,12 @@ export default async function RestaurantCouriersPage({
                     <form action={removeCourier}>
                       <input type="hidden" name="restaurantId" value={restaurantId} />
                       <input type="hidden" name="courierId" value={courier.id} />
-                      <button type="submit" className="quantity-btn admin-btn">
+                      <ConfirmSubmitButton
+                        confirmMessage={`Remover ${courier.fullName || courier.email} como entregador dessa loja?`}
+                        className="quantity-btn admin-btn"
+                      >
                         Remover
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   </td>
                 </tr>

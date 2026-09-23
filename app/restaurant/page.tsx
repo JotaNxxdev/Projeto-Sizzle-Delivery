@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
 import { getOrdersForRestaurant, getCouriersForRestaurant } from '@/lib/restaurant-data';
-import { updateOrderStatusAsOwner, assignCourierToOrder } from './actions';
+import { updateOrderStatusAsOwner, assignCourierToOrder, acceptOrder, rejectOrder } from './actions';
 import {
   DELIVERY_METHOD_LABEL,
   ORDER_STATUSES,
@@ -100,6 +100,11 @@ export default async function RestaurantOrdersPage({
               <p>
                 <strong>Observações:</strong> {order.notes || 'Nenhuma'}
               </p>
+              {order.status === 'Recusado' && order.rejectionReason && (
+                <p>
+                  <strong>Motivo da recusa:</strong> {order.rejectionReason}
+                </p>
+              )}
               <p>
                 <strong>Entregador:</strong> {order.courierName || 'Não atribuído'}
               </p>
@@ -114,6 +119,29 @@ export default async function RestaurantOrdersPage({
                 <strong>Total:</strong> {formatCurrency(order.total)}
               </p>
             </div>
+            {order.status === 'Pendente' && (
+              <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                <form action={acceptOrder}>
+                  <input type="hidden" name="restaurantId" value={restaurantId} />
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <button
+                    type="submit"
+                    className="checkout-button"
+                    style={{ marginTop: 0, backgroundColor: '#43B55C' }}
+                  >
+                    Aceitar pedido
+                  </button>
+                </form>
+                <form action={rejectOrder} className="admin-inline-form">
+                  <input type="hidden" name="restaurantId" value={restaurantId} />
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <input type="text" name="reason" placeholder="Motivo da recusa" required />
+                  <button type="submit" className="quantity-btn admin-btn" style={{ backgroundColor: '#F26666', color: '#fff' }}>
+                    Recusar
+                  </button>
+                </form>
+              </div>
+            )}
             <form action={updateOrderStatusAsOwner} className="admin-inline-form" style={{ marginTop: 10 }}>
               <input type="hidden" name="restaurantId" value={restaurantId} />
               <input type="hidden" name="orderId" value={order.id} />

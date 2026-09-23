@@ -14,6 +14,7 @@ export interface OwnerOrderRow {
   changeFor: number | null;
   notes: string | null;
   status: string;
+  rejectionReason: string | null;
   paymentStatus: string;
   subtotal: number;
   deliveryFee: number;
@@ -26,7 +27,7 @@ export interface OwnerOrderRow {
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(menu_item_name, price, quantity)';
 
 function mapOrderRow(o: {
   id: string;
@@ -40,6 +41,7 @@ function mapOrderRow(o: {
   change_for: number | string | null;
   notes: string | null;
   status: string;
+  rejection_reason: string | null;
   payment_status: string;
   subtotal: number | string;
   delivery_fee: number | string;
@@ -60,6 +62,7 @@ function mapOrderRow(o: {
     changeFor: o.change_for != null ? Number(o.change_for) : null,
     notes: o.notes,
     status: o.status,
+    rejectionReason: o.rejection_reason,
     paymentStatus: o.payment_status,
     subtotal: Number(o.subtotal),
     deliveryFee: Number(o.delivery_fee),
@@ -144,6 +147,7 @@ export interface RestaurantSettings {
   isOpen: boolean; // toggle manual (pausar/reabrir loja)
   businessHours: BusinessHours | null;
   isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
+  minOrderValue: number;
 }
 
 export async function getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
@@ -152,7 +156,7 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours'
+      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value'
     )
     .eq('id', restaurantId)
     .single();
@@ -179,6 +183,7 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
     isOpen,
     businessHours,
     isOpenNow: isOpen && isWithinBusinessHours(businessHours),
+    minOrderValue: Number(data.min_order_value),
   };
 }
 
@@ -189,6 +194,7 @@ export interface OwnerMenuItem {
   price: number;
   imageUrl: string | null;
   category: string;
+  active: boolean;
 }
 
 export async function getMenuItemsForRestaurant(restaurantId: string): Promise<OwnerMenuItem[]> {
@@ -196,7 +202,7 @@ export async function getMenuItemsForRestaurant(restaurantId: string): Promise<O
 
   const { data, error } = await supabase
     .from('menu_items')
-    .select('id, name, description, price, image_url, category')
+    .select('id, name, description, price, image_url, category, active')
     .eq('restaurant_id', restaurantId)
     .order('category', { ascending: true })
     .order('name', { ascending: true });
@@ -213,6 +219,7 @@ export async function getMenuItemsForRestaurant(restaurantId: string): Promise<O
     price: Number(item.price),
     imageUrl: item.image_url,
     category: item.category,
+    active: item.active,
   }));
 }
 

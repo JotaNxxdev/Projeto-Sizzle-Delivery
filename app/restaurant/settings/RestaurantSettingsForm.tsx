@@ -79,6 +79,17 @@ export default function RestaurantSettingsForm({ settings }: { settings: Restaur
         />
       </div>
       <div className="form-group">
+        <label htmlFor="minOrderValue">Pedido mínimo (R$) — deixe 0 pra não exigir mínimo</label>
+        <input
+          id="minOrderValue"
+          name="minOrderValue"
+          type="number"
+          step="0.01"
+          min="0"
+          defaultValue={settings.minOrderValue}
+        />
+      </div>
+      <div className="form-group">
         <label htmlFor="brandColor">Cor da loja</label>
         <input id="brandColor" name="brandColor" type="color" defaultValue={settings.brandColor ?? '#000000'} style={{ height: 45, padding: 4 }} />
       </div>

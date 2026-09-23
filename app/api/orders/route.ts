@@ -110,6 +110,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  if (restaurant.minOrderValue > 0 && subtotal < restaurant.minOrderValue) {
+    return NextResponse.json(
+      { error: `Pedido mínimo desse restaurante: ${restaurant.minOrderValue.toFixed(2)} (sem contar a entrega).` },
+      { status: 400 }
+    );
+  }
+
   const deliveryFee = deliveryMethod === 'pickup' ? 0 : restaurant.deliveryFee;
   const total = subtotal + deliveryFee;
   const orderCode = `PED-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
@@ -231,7 +238,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
+      'order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)'
     )
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
@@ -260,6 +267,7 @@ export async function GET() {
     paymentMethod: order.payment_method,
     changeFor: order.change_for != null ? Number(order.change_for) : null,
     status: order.status,
+    rejectionReason: order.rejection_reason,
     paymentStatus: order.payment_status,
     subtotal: Number(order.subtotal),
     deliveryFee: Number(order.delivery_fee),

@@ -35,6 +35,9 @@ export async function claimDelivery(formData: FormData) {
 
   if (findError || !order) fail('/courier', 'Pedido não encontrado nessa loja. Confira o código.');
   if (order!.status === 'Entregue') fail('/courier', 'Esse pedido já foi entregue.');
+  if (order!.status === 'Recusado' || order!.status === 'Cancelado') {
+    fail('/courier', 'Esse pedido foi recusado ou cancelado e não precisa mais de entrega.');
+  }
   if (order!.courier_id && order!.courier_id !== profile.id) {
     fail('/courier', 'Esse pedido já foi atribuído a outro entregador.');
   }

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getRestaurantById } from '@/lib/restaurants';
 import { formatBusinessHoursSummary } from '@/lib/business-hours';
+import { formatCurrency } from '@/lib/format';
 import BackButton from '@/components/BackButton';
 import MenuClient from './MenuClient';
 
@@ -30,8 +31,13 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
           <p style={{ color: '#666', marginTop: 0, marginBottom: 10 }}>{restaurant.description}</p>
         )}
         {hoursSummary.length > 0 && (
-          <p style={{ color: '#666', marginTop: 0, marginBottom: 20, fontSize: '0.9rem' }}>
+          <p style={{ color: '#666', marginTop: 0, marginBottom: 10, fontSize: '0.9rem' }}>
             <i className="fas fa-clock" aria-hidden="true" /> {hoursSummary.join(' • ')}
+          </p>
+        )}
+        {restaurant.minOrderValue > 0 && (
+          <p style={{ color: '#666', marginTop: 0, marginBottom: 20, fontSize: '0.9rem' }}>
+            <i className="fas fa-tag" aria-hidden="true" /> Pedido mínimo: {formatCurrency(restaurant.minOrderValue)}
           </p>
         )}
         {!restaurant.isOpenNow && (

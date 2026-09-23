@@ -10,6 +10,7 @@ interface MenuItemRow {
   price: number;
   image_url: string | null;
   category: string;
+  active: boolean;
 }
 
 interface RestaurantRow {
@@ -26,6 +27,7 @@ interface RestaurantRow {
   mp_access_token: string | null;
   is_open: boolean;
   business_hours: BusinessHours | null;
+  min_order_value: number;
   menu_items: MenuItemRow[] | null;
 }
 
@@ -49,14 +51,19 @@ function mapRestaurant(row: RestaurantRow): Restaurant {
     isOpen,
     businessHours,
     isOpenNow: isOpen && isWithinBusinessHours(businessHours),
-    menu: (row.menu_items ?? []).map((item) => ({
-      id: item.id,
-      name: item.name,
-      description: item.description ?? '',
-      price: Number(item.price),
-      image: item.image_url ?? '',
-      category: item.category,
-    })),
+    minOrderValue: Number(row.min_order_value),
+    // Item inativo não aparece pro cliente, mas continua existindo pro dono
+    // reativar quando quiser (ver getMenuItemsForRestaurant).
+    menu: (row.menu_items ?? [])
+      .filter((item) => item.active)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description ?? '',
+        price: Number(item.price),
+        image: item.image_url ?? '',
+        category: item.category,
+      })),
   };
 }
 
@@ -68,7 +75,7 @@ export async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, menu_items(id, name, description, price, image_url, category)'
+      'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, menu_items(id, name, description, price, image_url, category, active)'
     )
     .order('name', { ascending: true });
 

@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <h1>Painel do Administrador</h1>
       </header>
       <nav className="admin-tabs">
+        <Link href="/admin">Dashboard</Link>
         <Link href="/admin/restaurants">Restaurantes</Link>
         <Link href="/admin/orders">Pedidos</Link>
         <Link href="/admin/users">Usuários</Link>

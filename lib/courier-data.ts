@@ -51,6 +51,8 @@ function mapCourierOrder(o: {
   };
 }
 
+const INACTIVE_STATUSES = new Set(['Entregue', 'Recusado', 'Cancelado']);
+
 export async function getCourierActiveOrders(courierId: string): Promise<CourierOrderRow[]> {
   if (!supabase) return [];
 
@@ -58,7 +60,6 @@ export async function getCourierActiveOrders(courierId: string): Promise<Courier
     .from('orders')
     .select(COURIER_ORDER_SELECT)
     .eq('courier_id', courierId)
-    .neq('status', 'Entregue')
     .order('created_at', { ascending: true });
 
   if (error || !data) {
@@ -66,5 +67,5 @@ export async function getCourierActiveOrders(courierId: string): Promise<Courier
     return [];
   }
 
-  return data.map(mapCourierOrder);
+  return data.filter((o) => !INACTIVE_STATUSES.has(o.status)).map(mapCourierOrder);
 }

@@ -82,6 +82,68 @@ export async function listAllOrders(): Promise<AdminOrderRow[]> {
   }));
 }
 
+export interface AdminDashboardStats {
+  ordersToday: number;
+  revenueToday: number;
+  totalRestaurants: number;
+  openRestaurants: number;
+  totalCustomers: number;
+  totalCouriers: number;
+  cancelledOrders: number;
+  averageTicket: number;
+  ordersInProgress: number;
+}
+
+const EMPTY_DASHBOARD_STATS: AdminDashboardStats = {
+  ordersToday: 0,
+  revenueToday: 0,
+  totalRestaurants: 0,
+  openRestaurants: 0,
+  totalCustomers: 0,
+  totalCouriers: 0,
+  cancelledOrders: 0,
+  averageTicket: 0,
+  ordersInProgress: 0,
+};
+
+export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+  if (!supabase) return EMPTY_DASHBOARD_STATS;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [ordersTodayRes, restaurantsRes, customersRes, couriersRes, cancelledRes, inProgressRes, allOrdersRes] =
+    await Promise.all([
+      supabase.from('orders').select('total').gte('created_at', startOfToday.toISOString()),
+      supabase.from('restaurants').select('id, is_open'),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'courier'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['Cancelado', 'Recusado']),
+      supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['Pendente', 'Em Preparação', 'Saiu para entrega']),
+      supabase.from('orders').select('total').limit(2000),
+    ]);
+
+  const ordersToday = ordersTodayRes.data ?? [];
+  const revenueToday = ordersToday.reduce((sum, o) => sum + Number(o.total), 0);
+  const restaurants = restaurantsRes.data ?? [];
+  const allOrders = allOrdersRes.data ?? [];
+
+  return {
+    ordersToday: ordersToday.length,
+    revenueToday,
+    totalRestaurants: restaurants.length,
+    openRestaurants: restaurants.filter((r) => r.is_open).length,
+    totalCustomers: customersRes.count ?? 0,
+    totalCouriers: couriersRes.count ?? 0,
+    cancelledOrders: cancelledRes.count ?? 0,
+    ordersInProgress: inProgressRes.count ?? 0,
+    averageTicket: allOrders.length > 0 ? allOrders.reduce((sum, o) => sum + Number(o.total), 0) / allOrders.length : 0,
+  };
+}
+
 export async function listAllProfiles(): Promise<ProfileRow[]> {
   if (!supabase) return [];
 

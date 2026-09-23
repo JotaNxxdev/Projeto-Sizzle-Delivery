@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const body = (await request.json().catch(() => null)) as { data?: { id?: string | number } } | null;
+    const body = (await request.json().catch(() => null)) as { id?: string | number; data?: { id?: string | number } } | null;
     const paymentId =
       body?.data?.id != null
         ? String(body.data.id)
@@ -25,6 +25,27 @@ export async function POST(request: NextRequest) {
 
     if (!paymentId) {
       return NextResponse.json({ received: true });
+    }
+
+    // O Mercado Pago pode reenviar a mesma notificação mais de uma vez —
+    // o "id" do corpo é o identificador da notificação em si (diferente do
+    // id do pagamento). Se já processamos essa notificação antes, não
+    // processa de novo.
+    const notificationId = body?.id != null ? String(body.id) : null;
+    if (notificationId) {
+      const { error: dedupeError } = await supabase
+        .from('webhook_events')
+        .insert({ source: 'mercadopago', external_id: notificationId, payload: body });
+
+      if (dedupeError) {
+        if (dedupeError.code === '23505') {
+          // unique_violation: notificação já processada antes.
+          return NextResponse.json({ received: true, duplicate: true });
+        }
+        console.error('[Sizzle] Erro ao registrar evento de webhook:', dedupeError.message);
+        // segue processando mesmo assim — reprocessar é seguro aqui, só
+        // perdemos a proteção de idempotência nesse caso pontual.
+      }
     }
 
     const { data: order } = await supabase

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import SignOutButton from '@/components/SignOutButton';
 import { updateMyProfile } from './actions';
 import type { CurrentProfile } from '@/lib/auth';
+import { useToast } from '@/contexts/ToastContext';
 
 const ROLE_LABEL: Record<CurrentProfile['role'], string> = {
   customer: 'Cliente',
@@ -16,6 +17,7 @@ const ROLE_LABEL: Record<CurrentProfile['role'], string> = {
 
 export default function ProfileClient({ profile }: { profile: CurrentProfile }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(profile.fullName ?? '');
@@ -50,10 +52,11 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
       await updateMyProfile(formData);
       setNewAvatar(null);
       setSaved(true);
+      showToast('Perfil atualizado!', 'success');
       router.refresh();
     } catch (err) {
       console.error('[Sizzle] Erro ao salvar perfil:', err);
-      alert('Não foi possível salvar seu perfil. Tente novamente.');
+      showToast('Não foi possível salvar seu perfil. Tente novamente.', 'error');
     } finally {
       setSaving(false);
     }
