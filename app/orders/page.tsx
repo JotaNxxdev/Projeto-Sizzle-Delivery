@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
-import { PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
+import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
@@ -81,10 +81,22 @@ export default function OrdersPage() {
                   <strong>Data:</strong> {order.date}
                 </p>
                 <p>
-                  <strong>Observações:</strong> {order.notes || 'Nenhuma'}
+                  <strong>Recebe:</strong> {order.receiverName || 'Não informado'}
+                </p>
+                <p>
+                  <strong>Entrega:</strong> {DELIVERY_METHOD_LABEL[order.deliveryMethod] ?? order.deliveryMethod}
                 </p>
                 <p>
                   <strong>Endereço:</strong> {order.address || 'Não informado'}
+                </p>
+                <p>
+                  <strong>Pagamento:</strong> {PAYMENT_METHOD_LABEL[order.paymentMethod] ?? order.paymentMethod}
+                  {order.paymentMethod === 'cash' && order.changeFor != null && (
+                    <> — troco para {formatCurrency(order.changeFor)}</>
+                  )}
+                </p>
+                <p>
+                  <strong>Observações:</strong> {order.notes || 'Nenhuma'}
                 </p>
                 <p>
                   <strong>Itens:</strong>

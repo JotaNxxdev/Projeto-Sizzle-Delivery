@@ -5,6 +5,10 @@ export interface OwnerOrderRow {
   orderCode: string;
   contact: string;
   address: string;
+  receiverName: string | null;
+  deliveryMethod: string;
+  paymentMethod: string;
+  changeFor: number | null;
   notes: string | null;
   status: string;
   paymentStatus: string;
@@ -19,7 +23,7 @@ export async function getOrdersForRestaurant(restaurantId: string): Promise<Owne
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_code, contact_number, delivery_address, notes, status, payment_status, total, created_at, order_items(menu_item_name, price, quantity)'
+      'id, order_code, contact_number, delivery_address, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, total, created_at, order_items(menu_item_name, price, quantity)'
     )
     .eq('restaurant_id', restaurantId)
     .order('created_at', { ascending: false })
@@ -35,6 +39,10 @@ export async function getOrdersForRestaurant(restaurantId: string): Promise<Owne
     orderCode: o.order_code,
     contact: o.contact_number,
     address: o.delivery_address,
+    receiverName: o.receiver_name,
+    deliveryMethod: o.delivery_method,
+    paymentMethod: o.payment_method,
+    changeFor: o.change_for != null ? Number(o.change_for) : null,
     notes: o.notes,
     status: o.status,
     paymentStatus: o.payment_status,
@@ -57,6 +65,9 @@ export interface RestaurantSettings {
   imageUrl: string | null;
   brandColor: string | null;
   description: string | null;
+  onlinePaymentEnabled: boolean;
+  // Só diz SE está conectado — o token em si nunca sai do servidor.
+  mercadoPagoConnected: boolean;
 }
 
 export async function getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
@@ -64,7 +75,9 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
 
   const { data, error } = await supabase
     .from('restaurants')
-    .select('id, name, category, delivery_time, delivery_fee, image_url, brand_color, description')
+    .select(
+      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token'
+    )
     .eq('id', restaurantId)
     .single();
 
@@ -82,6 +95,8 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
     imageUrl: data.image_url,
     brandColor: data.brand_color,
     description: data.description,
+    onlinePaymentEnabled: data.online_payment_enabled,
+    mercadoPagoConnected: Boolean(data.mp_access_token),
   };
 }
 

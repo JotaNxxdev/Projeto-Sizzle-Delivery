@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
-import { getPaymentStatus, isMercadoPagoConfigured } from '@/lib/mercadopago';
+import { getPaymentStatus } from '@/lib/mercadopago';
 
 // Consultado pela tela de checkout enquanto o cliente espera o Pix cair.
 // Sempre que possível, confere direto com o Mercado Pago (fonte da verdade)
@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
 
   const { data: order, error } = await supabase
     .from('orders')
-    .select('id, user_id, mp_payment_id, payment_status')
+    .select('id, user_id, restaurant_id, mp_payment_id, payment_status')
     .eq('order_code', code)
     .single();
 
@@ -29,11 +29,23 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     return NextResponse.json({ error: 'Pedido não encontrado.' }, { status: 404 });
   }
 
-  if (!order.mp_payment_id || !isMercadoPagoConfigured) {
+  if (!order.mp_payment_id) {
     return NextResponse.json({ paymentStatus: order.payment_status });
   }
 
-  const liveStatus = await getPaymentStatus(order.mp_payment_id);
+  // Precisa do token do restaurante DONO do pagamento (foi criado na conta
+  // dele, não na da plataforma) para conseguir consultar o status.
+  let restaurantToken: string | null = null;
+  if (order.restaurant_id) {
+    const { data: restaurant } = await supabase
+      .from('restaurants')
+      .select('mp_access_token')
+      .eq('id', order.restaurant_id)
+      .single();
+    restaurantToken = restaurant?.mp_access_token ?? null;
+  }
+
+  const liveStatus = await getPaymentStatus(order.mp_payment_id, restaurantToken);
   if (liveStatus && liveStatus !== order.payment_status) {
     await supabase.from('orders').update({ payment_status: liveStatus }).eq('id', order.id);
   }

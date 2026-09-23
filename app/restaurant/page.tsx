@@ -1,7 +1,15 @@
 import { getCurrentProfile } from '@/lib/auth';
 import { getOrdersForRestaurant } from '@/lib/restaurant-data';
 import { updateOrderStatusAsOwner } from './actions';
-import { ORDER_STATUSES, PAYMENT_STATUS_LABEL, type PaymentStatus } from '@/lib/types';
+import {
+  DELIVERY_METHOD_LABEL,
+  ORDER_STATUSES,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_LABEL,
+  type DeliveryMethod,
+  type PaymentMethod,
+  type PaymentStatus,
+} from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
 
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
@@ -48,10 +56,24 @@ export default async function RestaurantOrdersPage({
                 <strong>Recebido em:</strong> {order.createdAt}
               </p>
               <p>
+                <strong>Recebe:</strong> {order.receiverName || 'Não informado'}
+              </p>
+              <p>
                 <strong>Contato:</strong> {order.contact}
               </p>
               <p>
+                <strong>Entrega:</strong>{' '}
+                {DELIVERY_METHOD_LABEL[order.deliveryMethod as DeliveryMethod] ?? order.deliveryMethod}
+              </p>
+              <p>
                 <strong>Endereço:</strong> {order.address}
+              </p>
+              <p>
+                <strong>Pagamento:</strong>{' '}
+                {PAYMENT_METHOD_LABEL[order.paymentMethod as PaymentMethod] ?? order.paymentMethod}
+                {order.paymentMethod === 'cash' && order.changeFor != null && (
+                  <> — troco para {formatCurrency(order.changeFor)}</>
+                )}
               </p>
               <p>
                 <strong>Observações:</strong> {order.notes || 'Nenhuma'}

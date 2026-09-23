@@ -5,5 +5,5 @@ export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage() {
   const profile = await getCurrentProfile();
-  return <CheckoutClient defaultContact={profile?.phone ?? ''} />;
+  return <CheckoutClient defaultContact={profile?.phone ?? ''} defaultReceiverName={profile?.fullName ?? ''} />;
 }

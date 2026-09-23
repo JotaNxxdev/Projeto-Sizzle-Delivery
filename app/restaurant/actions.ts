@@ -84,6 +84,32 @@ export async function updateRestaurantSettings(formData: FormData) {
   revalidatePath(`/restaurants/${restaurantId}`);
 }
 
+export async function disconnectMercadoPago(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const { error } = await db
+    .from('restaurants')
+    .update({ mp_user_id: null, mp_access_token: null, mp_refresh_token: null, online_payment_enabled: false })
+    .eq('id', restaurantId);
+
+  if (error) fail('/restaurant/settings', 'Não foi possível desconectar o Mercado Pago.');
+
+  revalidatePath('/restaurant/settings');
+}
+
+export async function toggleOnlinePayment(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const db = await requireOwnerOf(restaurantId);
+
+  const enabled = formData.get('enabled') === 'true';
+
+  const { error } = await db.from('restaurants').update({ online_payment_enabled: enabled }).eq('id', restaurantId);
+  if (error) fail('/restaurant/settings', 'Não foi possível atualizar essa opção.');
+
+  revalidatePath('/restaurant/settings');
+}
+
 export async function createMenuItem(formData: FormData) {
   const restaurantId = String(formData.get('restaurantId') || '');
   const db = await requireOwnerOf(restaurantId);

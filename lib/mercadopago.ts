@@ -1,11 +1,16 @@
-// Integração com a API de Pagamentos do Mercado Pago (Pix).
-// Documentação: https://www.mercadopago.com.br/developers/pt/reference/payments/_payments/post
+// Integração com a API de Pagamentos do Mercado Pago (Pix) + OAuth
+// ("Mercado Pago Connect"), que permite cada restaurante ligar a própria
+// conta — o dinheiro cai direto para o dono, não para a plataforma.
 //
-// Uso exclusivamente server-side: o Access Token nunca deve ser exposto ao
-// navegador. Fica em MERCADOPAGO_ACCESS_TOKEN (.env.local / Vercel).
-const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+// Documentação:
+//   Pagamentos: https://www.mercadopago.com.br/developers/pt/reference/payments/_payments/post
+//   OAuth: https://www.mercadopago.com.br/developers/pt/docs/security/oauth/creation
+//
+// Uso exclusivamente server-side: nenhum token deve ser exposto ao navegador.
+const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
 
-export const isMercadoPagoConfigured = Boolean(accessToken);
+export const isMercadoPagoOAuthConfigured = Boolean(clientId && clientSecret);
 
 const BASE_URL = 'https://api.mercadopago.com';
 
@@ -16,21 +21,20 @@ export interface PixPaymentResult {
   qrCodeBase64: string | null;
 }
 
+// accessToken: o token do restaurante (via Mercado Pago Connect) — o
+// pagamento é criado na conta dele, o dinheiro cai direto lá.
 export async function createPixPayment(params: {
   amount: number;
   description: string;
   payerEmail: string;
   externalReference: string;
   notificationUrl: string;
+  accessToken: string;
 }): Promise<PixPaymentResult> {
-  if (!accessToken) {
-    throw new Error('Mercado Pago não configurado.');
-  }
-
   const response = await fetch(`${BASE_URL}/v1/payments`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${params.accessToken}`,
       'Content-Type': 'application/json',
       // Evita cobrar duas vezes se a requisição for reenviada (ex.: timeout e retry).
       'X-Idempotency-Key': params.externalReference,
@@ -62,8 +66,9 @@ export async function createPixPayment(params: {
 
 // Consulta o status atual de um pagamento direto na API do Mercado Pago —
 // nunca confiamos no status que vier de fora (webhook), só no que a própria
-// API do Mercado Pago responde quando perguntamos por este ID.
-export async function getPaymentStatus(paymentId: string): Promise<string | null> {
+// API do Mercado Pago responde quando perguntamos por este ID. Precisa do
+// token do restaurante dono do pagamento (mesma conta usada para criá-lo).
+export async function getPaymentStatus(paymentId: string, accessToken: string | null): Promise<string | null> {
   if (!accessToken) return null;
 
   const response = await fetch(`${BASE_URL}/v1/payments/${paymentId}`, {
@@ -77,4 +82,60 @@ export async function getPaymentStatus(paymentId: string): Promise<string | null
 
   const body = await response.json().catch(() => null);
   return body?.status ?? null;
+}
+
+// --- Mercado Pago Connect (OAuth) -----------------------------------------
+
+export function getMercadoPagoConnectUrl(params: { state: string; redirectUri: string }): string {
+  if (!clientId) {
+    throw new Error('Mercado Pago Connect não configurado (falta MERCADOPAGO_CLIENT_ID).');
+  }
+
+  const url = new URL('https://auth.mercadopago.com.br/authorization');
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('platform_id', 'mp');
+  url.searchParams.set('state', params.state);
+  url.searchParams.set('redirect_uri', params.redirectUri);
+  return url.toString();
+}
+
+export interface MercadoPagoOAuthTokens {
+  accessToken: string;
+  refreshToken: string | null;
+  userId: string | null;
+}
+
+export async function exchangeMercadoPagoOAuthCode(params: {
+  code: string;
+  redirectUri: string;
+}): Promise<MercadoPagoOAuthTokens> {
+  if (!clientId || !clientSecret) {
+    throw new Error('Mercado Pago Connect não configurado.');
+  }
+
+  const response = await fetch(`${BASE_URL}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'authorization_code',
+      code: params.code,
+      redirect_uri: params.redirectUri,
+    }),
+  });
+
+  const body = await response.json().catch(() => null);
+
+  if (!response.ok || !body?.access_token) {
+    console.error('[Sizzle] Erro ao trocar código OAuth do Mercado Pago:', body);
+    throw new Error(body?.message || 'Não foi possível conectar sua conta do Mercado Pago.');
+  }
+
+  return {
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token ?? null,
+    userId: body.user_id != null ? String(body.user_id) : null,
+  };
 }
