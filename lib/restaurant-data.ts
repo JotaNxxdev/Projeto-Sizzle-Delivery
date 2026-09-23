@@ -5,6 +5,7 @@ export interface OwnerOrderRow {
   orderCode: string;
   contact: string;
   address: string;
+  referencePoint: string | null;
   receiverName: string | null;
   deliveryMethod: string;
   paymentMethod: string;
@@ -16,17 +17,19 @@ export interface OwnerOrderRow {
   deliveryFee: number;
   total: number;
   createdAt: string;
+  createdAtIso: string;
   items: { name: string; price: number; quantity: number }[];
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)';
 
 function mapOrderRow(o: {
   id: string;
   order_code: string;
   contact_number: string;
   delivery_address: string;
+  reference_point: string | null;
   receiver_name: string | null;
   delivery_method: string;
   payment_method: string;
@@ -45,6 +48,7 @@ function mapOrderRow(o: {
     orderCode: o.order_code,
     contact: o.contact_number,
     address: o.delivery_address,
+    referencePoint: o.reference_point,
     receiverName: o.receiver_name,
     deliveryMethod: o.delivery_method,
     paymentMethod: o.payment_method,
@@ -56,6 +60,7 @@ function mapOrderRow(o: {
     deliveryFee: Number(o.delivery_fee),
     total: Number(o.total),
     createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
+    createdAtIso: o.created_at,
     items: (o.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),
