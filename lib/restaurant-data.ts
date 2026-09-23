@@ -20,11 +20,13 @@ export interface OwnerOrderRow {
   total: number;
   createdAt: string;
   createdAtIso: string;
+  courierId: string | null;
+  courierName: string | null;
   items: { name: string; price: number; quantity: number }[];
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, order_items(menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(menu_item_name, price, quantity)';
 
 function mapOrderRow(o: {
   id: string;
@@ -43,6 +45,7 @@ function mapOrderRow(o: {
   delivery_fee: number | string;
   total: number | string;
   created_at: string;
+  courier_id: string | null;
   order_items: { menu_item_name: string; price: number | string; quantity: number }[] | null;
 }): OwnerOrderRow {
   return {
@@ -63,12 +66,32 @@ function mapOrderRow(o: {
     total: Number(o.total),
     createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
     createdAtIso: o.created_at,
+    courierId: o.courier_id,
+    courierName: null, // preenchido depois por attachCourierNames
     items: (o.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),
       quantity: item.quantity,
     })),
   };
+}
+
+// Busca os nomes dos entregadores à parte (em vez de um embed do Supabase)
+// pra não depender da tipagem incerta de relações to-one sem os tipos
+// gerados do schema — mesmo padrão já usado em listRestaurantsWithOwner.
+async function attachCourierNames(orders: OwnerOrderRow[]): Promise<OwnerOrderRow[]> {
+  if (!supabase) return orders;
+
+  const courierIds = Array.from(new Set(orders.map((o) => o.courierId).filter((id): id is string => Boolean(id))));
+  if (courierIds.length === 0) return orders;
+
+  const { data: couriers } = await supabase.from('profiles').select('id, full_name, email').in('id', courierIds);
+  const nameById = new Map((couriers ?? []).map((c) => [c.id, c.full_name || c.email]));
+
+  return orders.map((order) => ({
+    ...order,
+    courierName: order.courierId ? (nameById.get(order.courierId) ?? null) : null,
+  }));
 }
 
 export async function getOrdersForRestaurant(restaurantId: string, status?: string): Promise<OwnerOrderRow[]> {
@@ -87,7 +110,7 @@ export async function getOrdersForRestaurant(restaurantId: string, status?: stri
     return [];
   }
 
-  return data.map(mapOrderRow);
+  return attachCourierNames(data.map(mapOrderRow));
 }
 
 export async function getOrderForOwner(restaurantId: string, orderId: string): Promise<OwnerOrderRow | null> {
@@ -102,7 +125,8 @@ export async function getOrderForOwner(restaurantId: string, orderId: string): P
 
   if (error || !data) return null;
 
-  return mapOrderRow(data);
+  const [order] = await attachCourierNames([mapOrderRow(data)]);
+  return order;
 }
 
 export interface RestaurantSettings {
@@ -300,4 +324,28 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
     averageTicket: ordersTotal > 0 ? revenueTotal / ordersTotal : 0,
     topItems,
   };
+}
+
+export interface CourierRow {
+  id: string;
+  email: string;
+  fullName: string | null;
+}
+
+export async function getCouriersForRestaurant(restaurantId: string): Promise<CourierRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .eq('restaurant_id', restaurantId)
+    .eq('role', 'courier')
+    .order('full_name', { ascending: true });
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar entregadores do restaurante:', error?.message);
+    return [];
+  }
+
+  return data.map((courier) => ({ id: courier.id, email: courier.email, fullName: courier.full_name }));
 }

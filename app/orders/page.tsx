@@ -8,6 +8,7 @@ import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, type
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
   'Em Preparação': 'in-progress',
+  'Saiu para entrega': 'out-for-delivery',
   Entregue: 'delivered',
 };
 

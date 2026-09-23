@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
-import { getOrdersForRestaurant } from '@/lib/restaurant-data';
-import { updateOrderStatusAsOwner } from './actions';
+import { getOrdersForRestaurant, getCouriersForRestaurant } from '@/lib/restaurant-data';
+import { updateOrderStatusAsOwner, assignCourierToOrder } from './actions';
 import {
   DELIVERY_METHOD_LABEL,
   ORDER_STATUSES,
@@ -35,7 +35,10 @@ export default async function RestaurantOrdersPage({
   const restaurantId = profile.restaurantId;
 
   const activeStatus = status && (ORDER_STATUSES as string[]).includes(status) ? status : undefined;
-  const orders = await getOrdersForRestaurant(restaurantId, activeStatus);
+  const [orders, couriers] = await Promise.all([
+    getOrdersForRestaurant(restaurantId, activeStatus),
+    getCouriersForRestaurant(restaurantId),
+  ]);
 
   return (
     <div>
@@ -97,6 +100,9 @@ export default async function RestaurantOrdersPage({
               <p>
                 <strong>Observações:</strong> {order.notes || 'Nenhuma'}
               </p>
+              <p>
+                <strong>Entregador:</strong> {order.courierName || 'Não atribuído'}
+              </p>
               <ul>
                 {order.items.map((item, index) => (
                   <li key={index}>
@@ -130,6 +136,23 @@ export default async function RestaurantOrdersPage({
                 <i className="fas fa-print" aria-hidden="true" /> Imprimir comanda
               </a>
             </form>
+            {couriers.length > 0 && (
+              <form action={assignCourierToOrder} className="admin-inline-form" style={{ marginTop: 10 }}>
+                <input type="hidden" name="restaurantId" value={restaurantId} />
+                <input type="hidden" name="orderId" value={order.id} />
+                <select name="courierId" defaultValue={order.courierId ?? ''}>
+                  <option value="">Sem entregador</option>
+                  {couriers.map((courier) => (
+                    <option key={courier.id} value={courier.id}>
+                      {courier.fullName || courier.email}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" className="quantity-btn admin-btn">
+                  Atribuir entregador
+                </button>
+              </form>
+            )}
           </div>
         ))
       )}
