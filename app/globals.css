@@ -802,6 +802,17 @@ h2 {
     gap: 6px;
 }
 
+/* Tamanho fixo em pixels — sem isso, alguns navegadores/celulares desenham
+   o círculo nativo bem maior quando a acessibilidade de "fonte grande" do
+   aparelho está ativada, atropelando o texto ao lado. */
+.radio-group input[type='radio'],
+.admin-inline-form input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin: 0;
+}
+
 /* Linha de formulário com duas colunas (ex.: número + complemento) que
    empilha em telas estreitas em vez de espremer os campos. */
 .form-row {
