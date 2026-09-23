@@ -70,6 +70,11 @@ export default function CheckoutClient({ defaultContact }: { defaultContact: str
           qrCodeBase64: body.payment.qrCodeBase64,
         });
       } else {
+        if (body.paymentError) {
+          alert(
+            `Pedido #${body.orderCode} registrado, mas não conseguimos gerar o Pix agora. Combine o pagamento com o restaurante ou tente novamente pela tela de pedidos.`
+          );
+        }
         router.push('/orders');
       }
     } catch (err) {
