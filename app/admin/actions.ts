@@ -62,12 +62,22 @@ export async function assignOwner(formData: FormData) {
 
   const { data: ownerProfile, error: findError } = await db
     .from('profiles')
-    .select('id')
+    .select('id, role')
     .eq('email', ownerEmail)
     .single();
 
   if (findError || !ownerProfile) {
     fail('/admin/restaurants', 'Nenhum usuário com esse e-mail. Peça pra pessoa criar conta em /signup primeiro.');
+  }
+
+  // Atribuir um restaurante nunca deve sobrescrever o papel de quem já é
+  // administrador da plataforma — isso já travou um admin fora do próprio
+  // painel em teste de QA.
+  if (ownerProfile!.role === 'admin') {
+    fail(
+      '/admin/restaurants',
+      'Esse e-mail pertence a uma conta de administrador. Atribuir um restaurante a ela mudaria o papel dela — use um e-mail que não seja de admin.'
+    );
   }
 
   const { error: restaurantError } = await db
@@ -126,6 +136,95 @@ export async function removeOwner(formData: FormData) {
   revalidatePath('/admin/users');
 }
 
+export async function archiveRestaurant(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const restaurantId = String(formData.get('restaurantId') || '');
+  if (!restaurantId) fail('/admin/restaurants', 'Restaurante é obrigatório.');
+
+  const { error } = await db.from('restaurants').update({ is_archived: true }).eq('id', restaurantId);
+  if (error) fail('/admin/restaurants', 'Não foi possível arquivar o restaurante.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'archive_restaurant',
+    entity: 'restaurant',
+    entityId: restaurantId,
+  });
+
+  revalidatePath('/admin/restaurants');
+  revalidatePath('/');
+}
+
+export async function unarchiveRestaurant(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const restaurantId = String(formData.get('restaurantId') || '');
+  if (!restaurantId) fail('/admin/restaurants', 'Restaurante é obrigatório.');
+
+  const { error } = await db.from('restaurants').update({ is_archived: false }).eq('id', restaurantId);
+  if (error) fail('/admin/restaurants', 'Não foi possível reativar o restaurante.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'unarchive_restaurant',
+    entity: 'restaurant',
+    entityId: restaurantId,
+  });
+
+  revalidatePath('/admin/restaurants');
+  revalidatePath('/');
+}
+
+export async function deleteRestaurant(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const restaurantId = String(formData.get('restaurantId') || '');
+  if (!restaurantId) fail('/admin/restaurants', 'Restaurante é obrigatório.');
+
+  // Só permite excluir de verdade quando não há nenhum pedido registrado —
+  // caso contrário perderíamos histórico. Restaurante com pedidos deve ser
+  // arquivado em vez de excluído.
+  const { count } = await db
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurant_id', restaurantId);
+  if ((count ?? 0) > 0) {
+    fail('/admin/restaurants', 'Esse restaurante já tem pedidos registrados — exclua não é permitido. Use "Arquivar" para escondê-lo dos clientes sem perder o histórico.');
+  }
+
+  const { data: restaurant } = await db.from('restaurants').select('owner_id').eq('id', restaurantId).single();
+
+  // Limpa explicitamente os itens do cardápio (e, em cascata, seus grupos de
+  // adicionais) antes de excluir o restaurante — não dependemos de o schema
+  // original ter "on delete cascade" configurado em menu_items.
+  await db.from('menu_items').delete().eq('restaurant_id', restaurantId);
+
+  const { error } = await db.from('restaurants').delete().eq('id', restaurantId);
+  if (error) {
+    console.error('[Sizzle] Erro ao excluir restaurante:', error.message);
+    fail('/admin/restaurants', 'Não foi possível excluir o restaurante.');
+  }
+
+  if (restaurant?.owner_id) {
+    await db.from('profiles').update({ role: 'customer', restaurant_id: null }).eq('id', restaurant.owner_id);
+  }
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'delete_restaurant',
+    entity: 'restaurant',
+    entityId: restaurantId,
+  });
+
+  revalidatePath('/admin/restaurants');
+  revalidatePath('/admin/users');
+  revalidatePath('/');
+}
+
 export async function updateOrderStatusAsAdmin(formData: FormData) {
   const { profile, db } = await requireAdmin();
 
@@ -156,6 +255,20 @@ export async function updateUserRole(formData: FormData) {
   if (!userId || !role) fail('/admin/users', 'Usuário e papel são obrigatórios.');
   if (!['customer', 'restaurant_owner', 'admin'].includes(role)) {
     fail('/admin/users', 'Papel inválido.');
+  }
+
+  if (userId === profile.id) {
+    fail('/admin/users', 'Você não pode alterar o seu próprio papel. Peça para outro administrador fazer essa mudança.');
+  }
+
+  if (role !== 'admin') {
+    const { data: targetProfile } = await db.from('profiles').select('role').eq('id', userId).single();
+    if (targetProfile?.role === 'admin') {
+      const { count } = await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin');
+      if ((count ?? 0) <= 1) {
+        fail('/admin/users', 'Não é possível remover o último administrador do sistema.');
+      }
+    }
   }
 
   if (role !== 'restaurant_owner') {

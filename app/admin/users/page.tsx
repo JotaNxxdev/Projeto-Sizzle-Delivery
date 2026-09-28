@@ -1,4 +1,5 @@
 import { listAllProfiles } from '@/lib/admin-data';
+import { getCurrentProfile } from '@/lib/auth';
 import { updateUserRole } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export default async function AdminUsersPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const profiles = await listAllProfiles();
+  const [profiles, currentProfile] = await Promise.all([listAllProfiles(), getCurrentProfile()]);
 
   return (
     <div>
@@ -41,17 +42,23 @@ export default async function AdminUsersPage({
                 <td>{user.email}</td>
                 <td>{ROLE_LABEL[user.role] ?? user.role}</td>
                 <td>
-                  <form action={updateUserRole} className="admin-inline-form">
-                    <input type="hidden" name="userId" value={user.id} />
-                    <select name="role" defaultValue={user.role}>
-                      <option value="customer">Cliente</option>
-                      <option value="restaurant_owner">Dono de restaurante</option>
-                      <option value="admin">Administrador</option>
-                    </select>
-                    <button type="submit" className="quantity-btn admin-btn">
-                      Salvar
-                    </button>
-                  </form>
+                  {user.id === currentProfile?.id ? (
+                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                      Você — peça a outro admin pra alterar seu papel
+                    </span>
+                  ) : (
+                    <form action={updateUserRole} className="admin-inline-form">
+                      <input type="hidden" name="userId" value={user.id} />
+                      <select name="role" defaultValue={user.role}>
+                        <option value="customer">Cliente</option>
+                        <option value="restaurant_owner">Dono de restaurante</option>
+                        <option value="admin">Administrador</option>
+                      </select>
+                      <button type="submit" className="quantity-btn admin-btn">
+                        Salvar
+                      </button>
+                    </form>
+                  )}
                 </td>
               </tr>
             ))}

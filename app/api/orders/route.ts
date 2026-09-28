@@ -12,6 +12,10 @@ interface IncomingItem {
   selectedValueIds?: string[];
 }
 
+// Teto por item — impede pedidos absurdos (ex.: milhares de unidades) que
+// contaminam relatórios/dashboard e não fazem sentido pra um delivery.
+const MAX_ITEM_QUANTITY = 50;
+
 interface CreateOrderBody {
   restaurantId?: string;
   items?: IncomingItem[];
@@ -108,8 +112,16 @@ export async function POST(request: NextRequest) {
 
   for (const incoming of items) {
     const menuItem = restaurant.menu.find((item) => item.id === incoming.menuItemId);
-    if (!menuItem || !Number.isInteger(incoming.quantity) || incoming.quantity <= 0) {
-      return NextResponse.json({ error: 'Item do pedido inválido.' }, { status: 400 });
+    if (
+      !menuItem ||
+      !Number.isInteger(incoming.quantity) ||
+      incoming.quantity <= 0 ||
+      incoming.quantity > MAX_ITEM_QUANTITY
+    ) {
+      return NextResponse.json(
+        { error: `Item do pedido inválido (quantidade máxima por item: ${MAX_ITEM_QUANTITY}).` },
+        { status: 400 }
+      );
     }
 
     const selectedValueIds = Array.isArray(incoming.selectedValueIds) ? incoming.selectedValueIds : [];
