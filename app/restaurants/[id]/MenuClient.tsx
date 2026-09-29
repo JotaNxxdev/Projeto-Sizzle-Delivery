@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/format';
 import MenuItemOptionsModal from '@/components/MenuItemOptionsModal';
@@ -9,7 +8,6 @@ import type { MenuItem, Restaurant, SelectedOption } from '@/lib/types';
 
 export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
   const { addItem } = useCart();
-  const router = useRouter();
   const [optionsModalItem, setOptionsModalItem] = useState<MenuItem | null>(null);
 
   const groupedMenu = useMemo(() => {
@@ -33,7 +31,11 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
             .sort()
             .join(',')}`;
 
-    const { blocked } = addItem({
+    // Fica no cardápio em vez de já navegar pro carrinho — assim dá pra
+    // adicionar vários itens seguidos sem precisar voltar toda hora. O
+    // próprio CartContext mostra o toast de confirmação (e, se precisar,
+    // o modal de troca de restaurante).
+    addItem({
       cartItemId,
       menuItemId: item.id,
       name: item.name,
@@ -46,10 +48,6 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
       minOrderValue: restaurant.minOrderValue,
       selectedOptions,
     });
-
-    if (!blocked) {
-      router.push('/cart');
-    }
   }
 
   function handleAdd(item: MenuItem) {

@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { SEED_RESTAURANTS } from './seed-data';
 import { isWithinBusinessHours } from './business-hours';
@@ -122,7 +123,10 @@ export async function getRestaurants(): Promise<Restaurant[]> {
   return restaurants;
 }
 
-export async function getRestaurantById(id: string): Promise<Restaurant | null> {
+// cache() deduplica dentro do mesmo request — a página do restaurante chama
+// isso tanto em generateMetadata quanto no corpo da página, e sem isso
+// seria uma busca dobrada (lista inteira de restaurantes) a cada acesso.
+export const getRestaurantById = cache(async (id: string): Promise<Restaurant | null> => {
   const restaurants = await getRestaurants();
   return restaurants.find((restaurant) => restaurant.id === id) ?? null;
-}
+});

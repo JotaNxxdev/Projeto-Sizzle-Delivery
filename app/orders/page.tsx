@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 import StarRating from '@/components/StarRating';
 import { formatCurrency } from '@/lib/format';
-import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, type Order } from '@/lib/types';
+import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, getPaymentStatusLabel, type Order } from '@/lib/types';
 import { useToast } from '@/contexts/ToastContext';
 
 const STATUS_CLASS: Record<string, string> = {
@@ -133,7 +133,7 @@ export default function OrdersPage() {
               <div className="order-details">
                 <p>
                   <span className={`order-status ${PAYMENT_STATUS_CLASS[order.paymentStatus] ?? 'pending'}`}>
-                    {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
+                    {getPaymentStatusLabel(order.paymentMethod, order.paymentStatus)}
                   </span>
                 </p>
                 <p>

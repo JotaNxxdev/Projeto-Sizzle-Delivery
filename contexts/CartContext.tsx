@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useToast } from './ToastContext';
 import type { CartItem } from '@/lib/types';
 
 const STORAGE_KEY = 'sizzle_cart';
@@ -18,6 +19,8 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [pendingItem, setPendingItem] = useState<Omit<CartItem, 'quantity'> | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     // localStorage não existe no servidor, então a leitura só pode
@@ -37,29 +40,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
   }, [cart, hydrated]);
 
+  function insertItem(item: Omit<CartItem, 'quantity'>, base: CartItem[]): CartItem[] {
+    const existing = base.find((cartItem) => cartItem.cartItemId === item.cartItemId);
+    if (existing) {
+      return base.map((cartItem) =>
+        cartItem.cartItemId === item.cartItemId ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
+      );
+    }
+    return [...base, { ...item, quantity: 1 }];
+  }
+
   function addItem(item: Omit<CartItem, 'quantity'>): { blocked: boolean } {
     if (cart.length > 0 && cart[0].restaurantId !== item.restaurantId) {
-      const confirmClear = window.confirm(
-        'Seu carrinho contém itens de outro restaurante. Deseja limpar o carrinho e adicionar este item?'
-      );
-      if (!confirmClear) return { blocked: true };
-      setCart([{ ...item, quantity: 1 }]);
-      return { blocked: false };
+      // Pede confirmação (modal próprio, ver abaixo) em vez de adicionar
+      // direto — trocar de restaurante esvazia o carrinho atual.
+      setPendingItem(item);
+      return { blocked: true };
     }
 
-    setCart((prev) => {
-      const existing = prev.find((cartItem) => cartItem.cartItemId === item.cartItemId);
-      if (existing) {
-        return prev.map((cartItem) =>
-          cartItem.cartItemId === item.cartItemId
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        );
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
-
+    setCart((prev) => insertItem(item, prev));
+    showToast(`${item.name} adicionado ao carrinho.`, 'success');
     return { blocked: false };
+  }
+
+  function confirmPendingItem() {
+    if (!pendingItem) return;
+    setCart([{ ...pendingItem, quantity: 1 }]);
+    showToast(`${pendingItem.name} adicionado ao carrinho.`, 'success');
+    setPendingItem(null);
+  }
+
+  function cancelPendingItem() {
+    setPendingItem(null);
   }
 
   function updateQuantity(cartItemId: string, delta: number) {
@@ -82,6 +94,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider value={{ cart, addItem, updateQuantity, clearCart, subtotal }}>
       {children}
+      {pendingItem && (
+        <div className="modal-overlay" onClick={cancelPendingItem}>
+          <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+            <h3>Trocar de restaurante?</h3>
+            <p style={{ color: '#666' }}>
+              Seu carrinho tem itens de outro restaurante. Adicionar &quot;{pendingItem.name}&quot; esvazia o
+              carrinho atual e começa um pedido novo em {pendingItem.restaurantName}.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
+              <button type="button" className="checkout-button" style={{ marginTop: 0 }} onClick={confirmPendingItem}>
+                Esvaziar e adicionar
+              </button>
+              <button type="button" className="add-to-cart-button" onClick={cancelPendingItem}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </CartContext.Provider>
   );
 }

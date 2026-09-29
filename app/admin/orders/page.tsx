@@ -1,6 +1,6 @@
 import { listAllOrders } from '@/lib/admin-data';
 import { updateOrderStatusAsAdmin } from '../actions';
-import { ORDER_STATUSES, PAYMENT_STATUS_LABEL, type PaymentStatus } from '@/lib/types';
+import { ORDER_STATUSES, getPaymentStatusLabel, type PaymentMethod, type PaymentStatus } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +41,7 @@ export default async function AdminOrdersPage({
                 <td>{formatCurrency(order.total)}</td>
                 <td>{order.createdAt}</td>
                 <td>
-                  {PAYMENT_STATUS_LABEL[order.paymentStatus as PaymentStatus] ?? order.paymentStatus}
+                  {getPaymentStatusLabel(order.paymentMethod as PaymentMethod, order.paymentStatus as PaymentStatus)}
                 </td>
                 <td>
                   <form action={updateOrderStatusAsAdmin} className="admin-inline-form">

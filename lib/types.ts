@@ -120,6 +120,17 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   in_process: 'Pagamento em análise',
 };
 
+// "Aguardando pagamento" só faz sentido pra Pix (cobrança online). Pedido
+// combinado em dinheiro/cartão na entrega nunca teve uma cobrança criada,
+// então mostrar isso confunde — "Pagar na entrega" é o rótulo certo
+// enquanto o pagamento ainda não foi resolvido de outra forma.
+export function getPaymentStatusLabel(paymentMethod: PaymentMethod, paymentStatus: PaymentStatus): string {
+  if (paymentMethod !== 'pix' && paymentStatus === 'pending') {
+    return 'Pagar na entrega';
+  }
+  return PAYMENT_STATUS_LABEL[paymentStatus] ?? paymentStatus;
+}
+
 export type DeliveryMethod = 'delivery' | 'pickup';
 
 export const DELIVERY_METHOD_LABEL: Record<DeliveryMethod, string> = {

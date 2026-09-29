@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getRestaurantById } from '@/lib/restaurants';
 import { getReviewsForRestaurant } from '@/lib/reviews';
@@ -8,6 +9,21 @@ import StarRating from '@/components/StarRating';
 import MenuClient from './MenuClient';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const restaurant = await getRestaurantById(id);
+  if (!restaurant) return { title: 'Restaurante não encontrado | Sizzle' };
+
+  return {
+    title: `${restaurant.name} | Sizzle Delivery`,
+    description: restaurant.description || `Peça de ${restaurant.name} pelo Sizzle Delivery — ${restaurant.category}.`,
+  };
+}
 
 export default async function RestaurantPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,6 +46,11 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
         <h1>{restaurant.name}</h1>
       </header>
       <main className="app-main-menu">
+        <p style={{ color: '#666', marginTop: 0, marginBottom: 10, fontSize: '0.9rem' }}>
+          <i className="fas fa-star rating-icon" aria-hidden="true" /> {restaurant.rating.toFixed(1)}
+          {restaurant.reviewCount > 0 && ` (${restaurant.reviewCount})`} • {restaurant.deliveryTime} •{' '}
+          {restaurant.deliveryFee > 0 ? formatCurrency(restaurant.deliveryFee) : 'Entrega grátis'}
+        </p>
         {restaurant.description && (
           <p style={{ color: '#666', marginTop: 0, marginBottom: 10 }}>{restaurant.description}</p>
         )}

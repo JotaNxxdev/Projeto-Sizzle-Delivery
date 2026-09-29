@@ -170,6 +170,14 @@ export default function CheckoutClient({
       return;
     }
 
+    if (paymentMethod === 'cash' && changeFor.trim()) {
+      const changeForValue = Number(changeFor);
+      if (!Number.isFinite(changeForValue) || changeForValue <= total) {
+        showToast(`O troco precisa ser maior que o total do pedido (${formatCurrency(total)}).`, 'error');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch('/api/orders', {
