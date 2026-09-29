@@ -101,11 +101,13 @@ export async function getRestaurants(): Promise<Restaurant[]> {
     return SEED_RESTAURANTS;
   }
 
-  // Esconde da vitrine do cliente restaurantes arquivados, sem dono, ou sem
-  // nenhum item ativo no cardápio — são criações incompletas/órfãs, não
-  // lojas de verdade prontas pra receber pedido.
+  // Esconde da vitrine do cliente restaurantes arquivados ou sem nenhum
+  // item ativo no cardápio — são criações incompletas/órfãs, não lojas de
+  // verdade prontas pra receber pedido. Não exige dono vinculado: isso só
+  // afeta quem acessa o painel do dono, não impede o restaurante de vender
+  // (e nem todo restaurante real tem dono vinculado ainda).
   const visibleRows = (data as unknown as RestaurantRow[]).filter(
-    (row) => !row.is_archived && row.owner_id && (row.menu_items ?? []).some((item) => item.active)
+    (row) => !row.is_archived && (row.menu_items ?? []).some((item) => item.active)
   );
 
   const restaurants = visibleRows.map((row) => mapRestaurant(row, ratingAverages));
