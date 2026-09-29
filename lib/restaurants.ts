@@ -30,6 +30,8 @@ interface RestaurantRow {
   is_open: boolean;
   business_hours: BusinessHours | null;
   min_order_value: number;
+  owner_id: string | null;
+  is_archived: boolean;
   menu_items: MenuItemRow[] | null;
 }
 
@@ -83,7 +85,7 @@ export async function getRestaurants(): Promise<Restaurant[]> {
     supabase
       .from('restaurants')
       .select(
-        'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, menu_items(id, name, description, price, image_url, category, active)'
+        'id, name, category, rating, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, owner_id, is_archived, menu_items(id, name, description, price, image_url, category, active)'
       )
       .order('name', { ascending: true }),
     getRestaurantRatingAverages(),
@@ -98,7 +100,14 @@ export async function getRestaurants(): Promise<Restaurant[]> {
     return SEED_RESTAURANTS;
   }
 
-  const restaurants = (data as unknown as RestaurantRow[]).map((row) => mapRestaurant(row, ratingAverages));
+  // Esconde da vitrine do cliente restaurantes arquivados, sem dono, ou sem
+  // nenhum item ativo no cardápio — são criações incompletas/órfãs, não
+  // lojas de verdade prontas pra receber pedido.
+  const visibleRows = (data as unknown as RestaurantRow[]).filter(
+    (row) => !row.is_archived && row.owner_id && (row.menu_items ?? []).some((item) => item.active)
+  );
+
+  const restaurants = visibleRows.map((row) => mapRestaurant(row, ratingAverages));
 
   // Busca os adicionais de todos os itens de uma vez (uma query em lote em
   // vez de uma por item) e liga cada grupo ao item correspondente.

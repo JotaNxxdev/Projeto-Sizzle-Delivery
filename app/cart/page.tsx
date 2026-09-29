@@ -6,6 +6,10 @@ import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
 
+// Mesmo teto validado no servidor (app/api/orders/route.ts) — só pra não
+// deixar o botão "+" sugerir uma quantidade que o pedido vai recusar depois.
+const MAX_ITEM_QUANTITY = 50;
+
 export default function CartPage() {
   const { cart, updateQuantity, subtotal } = useCart();
   const router = useRouter();
@@ -65,6 +69,7 @@ export default function CartPage() {
                       className="quantity-btn"
                       onClick={() => updateQuantity(item.cartItemId, 1)}
                       aria-label={`Aumentar quantidade de ${item.name}`}
+                      disabled={item.quantity >= MAX_ITEM_QUANTITY}
                     >
                       +
                     </button>

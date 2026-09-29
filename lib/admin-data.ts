@@ -7,6 +7,8 @@ export interface RestaurantWithOwner {
   category: string;
   ownerId: string | null;
   ownerEmail: string | null;
+  isArchived: boolean;
+  orderCount: number;
 }
 
 export interface AdminOrderRow {
@@ -32,7 +34,7 @@ export async function listRestaurantsWithOwner(): Promise<RestaurantWithOwner[]>
 
   const { data, error } = await supabase
     .from('restaurants')
-    .select('id, name, category, owner_id')
+    .select('id, name, category, owner_id, is_archived')
     .order('name', { ascending: true });
 
   if (error || !data) {
@@ -48,12 +50,26 @@ export async function listRestaurantsWithOwner(): Promise<RestaurantWithOwner[]>
     emailByOwnerId = new Map((owners ?? []).map((o) => [o.id, o.email]));
   }
 
+  // Conta pedidos por restaurante de uma vez só, pra decidir na UI se dá pra
+  // excluir de verdade (sem pedidos) ou só arquivar (com histórico).
+  const restaurantIds = data.map((r) => r.id);
+  const orderCountByRestaurant = new Map<string, number>();
+  if (restaurantIds.length > 0) {
+    const { data: orders } = await supabase.from('orders').select('restaurant_id').in('restaurant_id', restaurantIds);
+    for (const order of orders ?? []) {
+      if (!order.restaurant_id) continue;
+      orderCountByRestaurant.set(order.restaurant_id, (orderCountByRestaurant.get(order.restaurant_id) ?? 0) + 1);
+    }
+  }
+
   return data.map((r) => ({
     id: r.id,
     name: r.name,
     category: r.category,
     ownerId: r.owner_id,
     ownerEmail: r.owner_id ? emailByOwnerId.get(r.owner_id) ?? null : null,
+    isArchived: r.is_archived,
+    orderCount: orderCountByRestaurant.get(r.id) ?? 0,
   }));
 }
 
