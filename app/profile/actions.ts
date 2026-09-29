@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
+import { isValidImageUrl } from '@/lib/image-url';
 
 export async function updateMyProfile(formData: FormData) {
   const profile = await getCurrentProfile();
@@ -22,7 +23,11 @@ export async function updateMyProfile(formData: FormData) {
   // atual sem querer.
   const avatarUrl = formData.get('avatarUrl');
   if (avatarUrl !== null) {
-    updates.avatar_url = String(avatarUrl).trim() || null;
+    const trimmedAvatarUrl = String(avatarUrl).trim();
+    if (trimmedAvatarUrl && !isValidImageUrl(trimmedAvatarUrl)) {
+      throw new Error('Foto inválida — envie pelo botão de upload em vez de colar uma URL muito longa.');
+    }
+    updates.avatar_url = trimmedAvatarUrl || null;
   }
 
   const { error } = await supabase.from('profiles').update(updates).eq('id', profile.id);

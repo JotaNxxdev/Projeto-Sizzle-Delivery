@@ -4,6 +4,7 @@ import { getRestaurantById } from '@/lib/restaurants';
 import { getCurrentProfile } from '@/lib/auth';
 import { createPixPayment } from '@/lib/mercadopago';
 import { validateCoupon } from '@/lib/coupons';
+import { isValidBrazilianPhone } from '@/lib/phone';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
 
 interface IncomingItem {
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
   }
   if (!contact?.trim() || !receiverName?.trim()) {
     return NextResponse.json({ error: 'Nome e telefone para contato são obrigatórios.' }, { status: 400 });
+  }
+  if (!isValidBrazilianPhone(contact)) {
+    return NextResponse.json({ error: 'Telefone de contato inválido. Informe um número com DDD.' }, { status: 400 });
   }
   if (
     deliveryMethod === 'delivery' &&

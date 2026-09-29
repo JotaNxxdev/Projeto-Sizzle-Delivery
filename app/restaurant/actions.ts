@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile, type CurrentProfile } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { isValidImageUrl } from '@/lib/image-url';
 import type { BusinessHours } from '@/lib/types';
 
 async function requireOwnerOf(restaurantId: string): Promise<{ profile: CurrentProfile; db: NonNullable<typeof supabase> }> {
@@ -141,7 +142,11 @@ export async function updateRestaurantSettings(formData: FormData) {
   // quando o dono escolhe um arquivo novo).
   const imageUrl = formData.get('imageUrl');
   if (imageUrl !== null && String(imageUrl).trim()) {
-    updates.image_url = String(imageUrl).trim();
+    const trimmedImageUrl = String(imageUrl).trim();
+    if (!isValidImageUrl(trimmedImageUrl)) {
+      fail('/restaurant/settings', 'Imagem inválida — envie a foto pelo botão de upload em vez de colar uma URL muito longa.');
+    }
+    updates.image_url = trimmedImageUrl;
   }
 
   const { error } = await db.from('restaurants').update(updates).eq('id', restaurantId);
@@ -224,6 +229,7 @@ export async function createMenuItem(formData: FormData) {
   const category = String(formData.get('category') || '').trim() || 'Geral';
 
   if (!name || !(price > 0)) fail('/restaurant/menu', 'Nome e preço válido são obrigatórios.');
+  if (imageUrl && !isValidImageUrl(imageUrl)) fail('/restaurant/menu', 'URL da imagem inválida.');
 
   const { error } = await db.from('menu_items').insert({
     restaurant_id: restaurantId,
@@ -251,6 +257,7 @@ export async function updateMenuItem(formData: FormData) {
   const active = formData.get('active') === 'on';
 
   if (!itemId || !name || !(price > 0)) fail('/restaurant/menu', 'Dados inválidos.');
+  if (imageUrl && !isValidImageUrl(imageUrl)) fail('/restaurant/menu', 'URL da imagem inválida.');
 
   const { data: previousItem } = await db.from('menu_items').select('name, price').eq('id', itemId).single();
 

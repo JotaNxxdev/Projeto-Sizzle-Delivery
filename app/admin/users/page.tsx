@@ -46,12 +46,19 @@ export default async function AdminUsersPage({
                     <span style={{ color: '#666', fontSize: '0.9rem' }}>
                       Você — peça a outro admin pra alterar seu papel
                     </span>
+                  ) : user.role === 'restaurant_owner' ? (
+                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                      Gerencie pela aba Restaurantes (Remover dono)
+                    </span>
+                  ) : user.role === 'courier' ? (
+                    <span style={{ color: '#666', fontSize: '0.9rem' }}>
+                      Gerencie pela aba Entregadores do painel do dono
+                    </span>
                   ) : (
                     <form action={updateUserRole} className="admin-inline-form">
                       <input type="hidden" name="userId" value={user.id} />
                       <select name="role" defaultValue={user.role}>
                         <option value="customer">Cliente</option>
-                        <option value="restaurant_owner">Dono de restaurante</option>
                         <option value="admin">Administrador</option>
                       </select>
                       <button type="submit" className="quantity-btn admin-btn">
@@ -67,9 +74,9 @@ export default async function AdminUsersPage({
         </div>
       )}
       <p className="empty-state" style={{ marginTop: 10 }}>
-        Promover alguém a &quot;Dono de restaurante&quot; por aqui não vincula nenhum restaurante a ele — use a aba
-        Restaurantes para atribuir o dono pelo e-mail. Entregadores não são atribuídos por aqui — cada dono de
-        restaurante vincula os próprios entregadores na aba Entregadores do painel dele.
+        Esse seletor só troca entre Cliente e Administrador. Pra tornar alguém dono de restaurante, use a aba
+        Restaurantes (atribui o e-mail a uma loja específica). Entregadores são vinculados pelo próprio dono de
+        restaurante, na aba Entregadores do painel dele.
       </p>
     </div>
   );

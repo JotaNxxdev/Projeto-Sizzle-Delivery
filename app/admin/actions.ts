@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { isValidImageUrl } from '@/lib/image-url';
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
@@ -32,6 +33,9 @@ export async function createRestaurant(formData: FormData) {
 
   if (!name || !category) {
     fail('/admin/restaurants', 'Nome e categoria são obrigatórios.');
+  }
+  if (imageUrl && !isValidImageUrl(imageUrl)) {
+    fail('/admin/restaurants', 'URL da imagem inválida.');
   }
 
   const { error } = await db.from('restaurants').insert({
@@ -261,6 +265,13 @@ export async function updateUserRole(formData: FormData) {
     fail('/admin/users', 'Você não pode alterar o seu próprio papel. Peça para outro administrador fazer essa mudança.');
   }
 
+  // "Dono de restaurante" só pode ser definido pela aba Restaurantes
+  // (assignOwner), que vincula o restaurant_id junto — por esse seletor
+  // genérico, ficava fácil criar um "dono" sem restaurante nenhum.
+  if (role === 'restaurant_owner') {
+    fail('/admin/users', 'Pra tornar alguém dono de restaurante, use a aba Restaurantes e atribua o e-mail dele a uma loja.');
+  }
+
   if (role !== 'admin') {
     const { data: targetProfile } = await db.from('profiles').select('role').eq('id', userId).single();
     if (targetProfile?.role === 'admin') {
@@ -271,12 +282,10 @@ export async function updateUserRole(formData: FormData) {
     }
   }
 
-  if (role !== 'restaurant_owner') {
-    await db.from('restaurants').update({ owner_id: null }).eq('owner_id', userId);
-    await db.from('profiles').update({ role, restaurant_id: null }).eq('id', userId);
-  } else {
-    await db.from('profiles').update({ role }).eq('id', userId);
-  }
+  // Chegando aqui, role só pode ser 'customer' ou 'admin' (restaurant_owner
+  // já foi recusado acima) — sempre limpa qualquer vínculo de loja/entrega.
+  await db.from('restaurants').update({ owner_id: null }).eq('owner_id', userId);
+  await db.from('profiles').update({ role, restaurant_id: null }).eq('id', userId);
 
   await logAudit(db, {
     userId: profile.id,

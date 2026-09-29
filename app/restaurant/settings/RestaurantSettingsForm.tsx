@@ -2,30 +2,45 @@
 
 import { useRef, useState } from 'react';
 import { updateRestaurantSettings } from '../actions';
+import { useToast } from '@/contexts/ToastContext';
 import type { RestaurantSettings } from '@/lib/restaurant-data';
 
 export default function RestaurantSettingsForm({ settings }: { settings: RestaurantSettings }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
   const [imagePreview, setImagePreview] = useState(settings.imageUrl ?? '');
-  const [newImage, setNewImage] = useState<string | null>(null);
+  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      const result = loadEvent.target?.result as string;
-      setImagePreview(result);
-      setNewImage(result);
-    };
-    reader.readAsDataURL(file);
+    // Preview instantâneo local — o upload de verdade acontece em paralelo,
+    // sem nunca guardar o arquivo inteiro em base64 no formulário.
+    setImagePreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.set('file', file);
+      const response = await fetch('/api/upload', { method: 'POST', body: uploadData });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Não foi possível enviar a imagem.');
+      setNewImageUrl(body.url);
+    } catch (err) {
+      console.error('[Sizzle] Erro ao enviar imagem:', err);
+      const message = err instanceof Error ? err.message : 'Não foi possível enviar a imagem.';
+      showToast(message, 'error');
+      setImagePreview(settings.imageUrl ?? '');
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
     <form action={updateRestaurantSettings} className="checkout-form">
       <input type="hidden" name="restaurantId" value={settings.id} />
-      {newImage && <input type="hidden" name="imageUrl" value={newImage} />}
+      {newImageUrl && <input type="hidden" name="imageUrl" value={newImageUrl} />}
 
       <div className="profile-picture-container" style={{ marginBottom: 20 }}>
         {imagePreview ? (
@@ -94,8 +109,8 @@ export default function RestaurantSettingsForm({ settings }: { settings: Restaur
         <input id="brandColor" name="brandColor" type="color" defaultValue={settings.brandColor ?? '#000000'} style={{ height: 45, padding: 4 }} />
       </div>
 
-      <button type="submit" className="checkout-button">
-        Salvar loja
+      <button type="submit" className="checkout-button" disabled={uploading}>
+        {uploading ? 'Enviando imagem...' : 'Salvar loja'}
       </button>
     </form>
   );

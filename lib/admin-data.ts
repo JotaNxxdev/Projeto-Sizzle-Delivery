@@ -130,7 +130,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
 
   const [ordersTodayRes, restaurantsRes, customersRes, couriersRes, cancelledRes, inProgressRes, allOrdersRes] =
     await Promise.all([
-      supabase.from('orders').select('total').gte('created_at', startOfToday.toISOString()),
+      supabase.from('orders').select('total, status').gte('created_at', startOfToday.toISOString()),
       supabase.from('restaurants').select('id, is_open'),
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'customer'),
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'courier'),
@@ -139,13 +139,16 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
         .from('orders')
         .select('id', { count: 'exact', head: true })
         .in('status', ['Pendente', 'Em Preparação', 'Saiu para entrega']),
-      supabase.from('orders').select('total').limit(2000),
+      supabase.from('orders').select('total, status').limit(2000),
     ]);
 
-  const ordersToday = ordersTodayRes.data ?? [];
+  // Pedido cancelado/recusado não é faturamento de verdade — não entra na
+  // soma nem no ticket médio.
+  const EXCLUDED_STATUSES = new Set(['Cancelado', 'Recusado']);
+  const ordersToday = (ordersTodayRes.data ?? []).filter((o) => !EXCLUDED_STATUSES.has(o.status));
   const revenueToday = ordersToday.reduce((sum, o) => sum + Number(o.total), 0);
   const restaurants = restaurantsRes.data ?? [];
-  const allOrders = allOrdersRes.data ?? [];
+  const allOrders = (allOrdersRes.data ?? []).filter((o) => !EXCLUDED_STATUSES.has(o.status));
 
   return {
     ordersToday: ordersToday.length,
