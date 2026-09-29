@@ -24,7 +24,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = idRef.current++;
-    setToasts((prev) => [...prev, { id, message, type }]);
+    // Substitui qualquer toast anterior em vez de empilhar — evita um aviso
+    // antigo (já resolvido) continuar visível junto com um novo e confundir.
+    setToasts([{ id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, TOAST_DURATION_MS);

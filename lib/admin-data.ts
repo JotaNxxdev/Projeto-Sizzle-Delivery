@@ -16,6 +16,7 @@ export interface AdminOrderRow {
   orderCode: string;
   restaurantName: string;
   status: string;
+  paymentMethod: string;
   paymentStatus: string;
   total: number;
   createdAt: string;
@@ -78,7 +79,7 @@ export async function listAllOrders(): Promise<AdminOrderRow[]> {
 
   const { data, error } = await supabase
     .from('orders')
-    .select('id, order_code, restaurant_name, status, payment_status, total, created_at')
+    .select('id, order_code, restaurant_name, status, payment_method, payment_status, total, created_at')
     .order('created_at', { ascending: false })
     .limit(200);
 
@@ -92,6 +93,7 @@ export async function listAllOrders(): Promise<AdminOrderRow[]> {
     orderCode: o.order_code,
     restaurantName: o.restaurant_name,
     status: o.status,
+    paymentMethod: o.payment_method,
     paymentStatus: o.payment_status,
     total: Number(o.total),
     createdAt: new Date(o.created_at).toLocaleString('pt-BR'),

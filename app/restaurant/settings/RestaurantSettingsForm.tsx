@@ -79,7 +79,7 @@ export default function RestaurantSettingsForm({ settings }: { settings: Restaur
       </div>
       <div className="form-group">
         <label htmlFor="deliveryTime">Tempo de entrega</label>
-        <input id="deliveryTime" name="deliveryTime" defaultValue={settings.deliveryTime} required />
+        <input id="deliveryTime" name="deliveryTime" placeholder="Ex: 30-40 min" defaultValue={settings.deliveryTime} required />
       </div>
       <div className="form-group">
         <label htmlFor="deliveryFee">Taxa de entrega (R$)</label>

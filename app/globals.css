@@ -24,6 +24,20 @@ body {
     flex-grow: 1;
 }
 
+/* Em telas largas, centraliza o app numa coluna "de celular" em vez de
+   esticar o conteúdo até a borda da janela. */
+@media (min-width: 700px) {
+    body {
+        align-items: center;
+    }
+
+    #app-container,
+    .app-footer {
+        max-width: 480px;
+        width: 100%;
+    }
+}
+
 /* Cada rota renderiza uma única "tela" por vez */
 .screen {
     display: flex;
@@ -291,6 +305,24 @@ h2 {
 .nav-item.active {
     color: #43B55C;
     font-weight: 600;
+}
+
+.cart-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    background-color: #F26666;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
 }
 
 /* Estilos para a tela do menu do restaurante */

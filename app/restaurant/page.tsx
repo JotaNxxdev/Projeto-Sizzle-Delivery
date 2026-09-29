@@ -6,7 +6,7 @@ import {
   DELIVERY_METHOD_LABEL,
   ORDER_STATUSES,
   PAYMENT_METHOD_LABEL,
-  PAYMENT_STATUS_LABEL,
+  getPaymentStatusLabel,
   type DeliveryMethod,
   type PaymentMethod,
   type PaymentStatus,
@@ -70,7 +70,7 @@ export default async function RestaurantOrdersPage({
             <div className="order-header">
               <h4>Pedido #{order.orderCode}</h4>
               <span className={`order-status ${PAYMENT_STATUS_CLASS[order.paymentStatus] ?? 'pending'}`}>
-                {PAYMENT_STATUS_LABEL[order.paymentStatus as PaymentStatus] ?? order.paymentStatus}
+                {getPaymentStatusLabel(order.paymentMethod as PaymentMethod, order.paymentStatus as PaymentStatus)}
               </span>
             </div>
             <div className="order-details">
