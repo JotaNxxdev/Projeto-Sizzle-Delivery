@@ -6,6 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
 import { formatCurrency } from '@/lib/format';
+import { isValidBrazilianPhone } from '@/lib/phone';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
 import type { Address } from '@/lib/addresses';
 import PixPayment from './PixPayment';
@@ -156,6 +157,11 @@ export default function CheckoutClient({
 
     if (!receiverName.trim() || !contact.trim()) {
       showToast('Por favor, preencha o nome e o telefone para contato.', 'error');
+      return;
+    }
+
+    if (!isValidBrazilianPhone(contact)) {
+      showToast('Telefone inválido. Informe um número com DDD, ex: (11) 91234-5678.', 'error');
       return;
     }
 

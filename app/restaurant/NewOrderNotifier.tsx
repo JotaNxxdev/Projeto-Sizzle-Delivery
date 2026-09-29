@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const STORAGE_KEY_PREFIX = 'sizzle_last_seen_order_';
-const POLL_INTERVAL_MS = 20000;
+// 8s em vez de 20s — o painel precisa perceber pedido novo rápido o
+// suficiente pra não parecer "travado" pro dono.
+const POLL_INTERVAL_MS = 8000;
 
 function playNotificationSound() {
   try {
@@ -37,6 +40,7 @@ function playNotificationSound() {
 export default function NewOrderNotifier({ restaurantId }: { restaurantId: string }) {
   const [newCount, setNewCount] = useState(0);
   const lastSeenRef = useRef<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const storageKey = STORAGE_KEY_PREFIX + restaurantId;
@@ -61,6 +65,9 @@ export default function NewOrderNotifier({ restaurantId }: { restaurantId: strin
             lastSeenRef.current = data.latestCreatedAt;
             localStorage.setItem(storageKey, data.latestCreatedAt);
           }
+          // Atualiza a lista de pedidos (Server Component) sozinha — o dono
+          // não precisa apertar F5 pra ver o pedido novo aparecer.
+          router.refresh();
         }
       } catch {
         // falha de rede momentânea — tenta de novo no próximo ciclo
@@ -72,7 +79,7 @@ export default function NewOrderNotifier({ restaurantId }: { restaurantId: strin
       cancelled = true;
       clearInterval(interval);
     };
-  }, [restaurantId]);
+  }, [restaurantId, router]);
 
   if (newCount === 0) return null;
 

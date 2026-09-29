@@ -26,18 +26,31 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
   const [newAvatar, setNewAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      const result = loadEvent.target?.result as string;
-      setAvatarPreview(result);
-      setNewAvatar(result);
-    };
-    reader.readAsDataURL(file);
+    // Preview instantâneo local — o upload de verdade acontece em paralelo,
+    // sem nunca guardar o arquivo inteiro em base64 no formulário.
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploadingAvatar(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.set('file', file);
+      const response = await fetch('/api/upload', { method: 'POST', body: uploadData });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Não foi possível enviar a foto.');
+      setNewAvatar(body.url);
+    } catch (err) {
+      console.error('[Sizzle] Erro ao enviar foto:', err);
+      const message = err instanceof Error ? err.message : 'Não foi possível enviar a foto.';
+      showToast(message, 'error');
+      setAvatarPreview(profile.avatarUrl ?? '/default-user.svg');
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   async function handleSave() {
@@ -139,8 +152,8 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
               onChange={(event) => setPhone(event.target.value)}
             />
           </div>
-          <button type="button" className="checkout-button" onClick={handleSave} disabled={saving}>
-            {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar alterações'}
+          <button type="button" className="checkout-button" onClick={handleSave} disabled={saving || uploadingAvatar}>
+            {uploadingAvatar ? 'Enviando foto...' : saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar alterações'}
           </button>
         </div>
 

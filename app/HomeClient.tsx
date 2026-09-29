@@ -41,7 +41,8 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
       const matchesSearch =
         !term ||
         restaurant.name.toLowerCase().includes(term) ||
-        restaurant.category.toLowerCase().includes(term);
+        restaurant.category.toLowerCase().includes(term) ||
+        restaurant.menu.some((item) => item.name.toLowerCase().includes(term));
       return matchesCategory && matchesSearch;
     });
   }, [restaurants, search, activeCategory]);

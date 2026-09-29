@@ -297,6 +297,10 @@ const EMPTY_REPORT: RestaurantReport = {
 
 // Pedidos com pagamento recusado/cancelado não entram nas somas de receita.
 const EXCLUDED_PAYMENT_STATUSES = new Set(['rejected', 'cancelled']);
+// Nem pedidos que o próprio pedido (não o pagamento) marca como cancelado ou
+// recusado — ex.: pago em dinheiro na entrega mas recusado pelo restaurante,
+// que tem payment_status = 'pending' e escaparia do filtro acima.
+const EXCLUDED_ORDER_STATUSES = new Set(['Cancelado', 'Recusado']);
 
 export async function getRestaurantReport(restaurantId: string): Promise<RestaurantReport> {
   if (!supabase) return EMPTY_REPORT;
@@ -340,7 +344,7 @@ export async function getRestaurantReport(restaurantId: string): Promise<Restaur
     if (order.status === 'Cancelado') cancelledOrders += 1;
     if (order.status === 'Recusado') rejectedOrders += 1;
 
-    if (EXCLUDED_PAYMENT_STATUSES.has(order.payment_status)) continue;
+    if (EXCLUDED_PAYMENT_STATUSES.has(order.payment_status) || EXCLUDED_ORDER_STATUSES.has(order.status)) continue;
 
     const total = Number(order.total);
     const createdAt = new Date(order.created_at);

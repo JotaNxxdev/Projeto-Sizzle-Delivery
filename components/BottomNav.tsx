@@ -10,8 +10,17 @@ const NAV_ITEMS = [
   { href: '/profile', label: 'Perfil', icon: 'fa-user' },
 ];
 
+// Painéis de dono de restaurante, admin e entregador têm a própria
+// navegação e ocupam a tela inteira — a barra do cliente só atrapalha,
+// sobrepondo conteúdo neles.
+const HIDDEN_PREFIXES = ['/restaurant', '/admin', '/courier'];
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  if (HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return null;
+  }
 
   return (
     <footer className="app-footer">
