@@ -7,6 +7,24 @@ export interface CouponValidationResult {
   couponId?: string;
 }
 
+export interface DiscountableCoupon {
+  discountType: string;
+  discountValue: number;
+  maxDiscount: number | null;
+}
+
+// Cálculo puro do desconto — extraído pra poder testar sem precisar de
+// banco de dados. Nunca deixa o desconto passar do próprio subtotal
+// (evita total negativo).
+export function calculateCouponDiscount(coupon: DiscountableCoupon, subtotal: number): number {
+  let discount =
+    coupon.discountType === 'percent' ? (subtotal * coupon.discountValue) / 100 : coupon.discountValue;
+
+  if (coupon.maxDiscount != null) discount = Math.min(discount, coupon.maxDiscount);
+  discount = Math.min(discount, subtotal);
+  return Math.round(discount * 100) / 100;
+}
+
 // Usada tanto na pré-visualização do desconto no checkout quanto (de novo,
 // nunca confiando no valor calculado pelo navegador) na criação do pedido.
 export async function validateCoupon(
@@ -64,12 +82,10 @@ export async function validateCoupon(
     }
   }
 
-  let discount =
-    coupon.discount_type === 'percent' ? (subtotal * Number(coupon.discount_value)) / 100 : Number(coupon.discount_value);
-
-  if (coupon.max_discount != null) discount = Math.min(discount, Number(coupon.max_discount));
-  discount = Math.min(discount, subtotal);
-  discount = Math.round(discount * 100) / 100;
+  const discount = calculateCouponDiscount(
+    { discountType: coupon.discount_type, discountValue: Number(coupon.discount_value), maxDiscount: coupon.max_discount != null ? Number(coupon.max_discount) : null },
+    subtotal
+  );
 
   return { valid: true, discount, couponId: coupon.id };
 }

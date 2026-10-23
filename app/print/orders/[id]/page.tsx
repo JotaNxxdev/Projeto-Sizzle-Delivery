@@ -60,6 +60,11 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ id:
           <p className="comanda-datetime">
             {dateLabel} • {timeLabel}
           </p>
+          {order.scheduledFor && (
+            <p className="comanda-datetime" style={{ fontWeight: 700 }}>
+              AGENDADO: {order.scheduledFor}
+            </p>
+          )}
         </div>
       </header>
 

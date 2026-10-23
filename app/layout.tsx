@@ -1,9 +1,11 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/contexts/CartContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import BottomNav from '@/components/BottomNav';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -15,6 +17,15 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'Sizzle | Delivery',
   description: 'Peça comida dos melhores restaurantes perto de você.',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/icon-192.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#000000',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -27,10 +38,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <ServiceWorkerRegister />
         <ToastProvider>
           <CartProvider>
-            <div id="app-container">{children}</div>
-            <BottomNav />
+            <FavoritesProvider>
+              <div id="app-container">{children}</div>
+              <BottomNav />
+            </FavoritesProvider>
           </CartProvider>
         </ToastProvider>
       </body>

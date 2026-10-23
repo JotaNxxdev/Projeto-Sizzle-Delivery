@@ -24,6 +24,13 @@ interface CompletedOrder {
 
 const NEW_ADDRESS_OPTION = '__new__';
 
+// Formata pro formato que <input type="datetime-local"> espera
+// (YYYY-MM-DDTHH:mm, sem timezone) usando o horário local do navegador.
+function toDatetimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function CheckoutClient({
   defaultContact,
   defaultReceiverName,
@@ -49,6 +56,8 @@ export default function CheckoutClient({
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(onlinePaymentEnabled ? 'pix' : 'cash');
   const [changeFor, setChangeFor] = useState('');
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
@@ -178,6 +187,11 @@ export default function CheckoutClient({
       }
     }
 
+    if (isScheduled && !scheduledFor) {
+      showToast('Escolha o horário pra agendar o pedido.', 'error');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch('/api/orders', {
@@ -203,6 +217,7 @@ export default function CheckoutClient({
           paymentMethod,
           changeFor: paymentMethod === 'cash' && changeFor.trim() ? Number(changeFor) : null,
           couponCode: appliedCoupon?.code || undefined,
+          scheduledFor: isScheduled && scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
         }),
       });
 
@@ -338,6 +353,29 @@ export default function CheckoutClient({
                 Retirada no local
               </label>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Quando entregar/retirar:</label>
+            <div className="radio-group" style={{ marginBottom: isScheduled ? 10 : 0 }}>
+              <label>
+                <input type="radio" name="whenOrder" checked={!isScheduled} onChange={() => setIsScheduled(false)} />
+                Agora
+              </label>
+              <label>
+                <input type="radio" name="whenOrder" checked={isScheduled} onChange={() => setIsScheduled(true)} />
+                Agendar
+              </label>
+            </div>
+            {isScheduled && (
+              <input
+                type="datetime-local"
+                value={scheduledFor}
+                onChange={(event) => setScheduledFor(event.target.value)}
+                min={toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000))}
+                max={toDatetimeLocal(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}
+              />
+            )}
           </div>
 
           {deliveryMethod === 'delivery' && (

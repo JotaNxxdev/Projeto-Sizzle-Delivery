@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
+import { sendPushToUser } from '@/lib/push';
 
 async function requireCourier() {
   const profile = await getCurrentProfile();
@@ -19,6 +20,18 @@ async function requireCourier() {
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+// Notifica o cliente dono do pedido por push — melhor esforço, nunca
+// bloqueia a ação principal se falhar.
+async function notifyCustomerOfStatus(
+  db: NonNullable<typeof supabase>,
+  orderId: string,
+  body: string
+): Promise<void> {
+  const { data: order } = await db.from('orders').select('user_id, order_code').eq('id', orderId).single();
+  if (!order?.user_id) return;
+  await sendPushToUser(order.user_id, { title: `Pedido ${order.order_code}`, body, url: '/orders' });
 }
 
 export async function claimDelivery(formData: FormData) {
@@ -73,6 +86,8 @@ export async function markPickedUp(formData: FormData) {
     newValue: { status: 'Saiu para entrega' },
   });
 
+  await notifyCustomerOfStatus(db, orderId, 'Seu pedido saiu para entrega!');
+
   revalidatePath('/courier');
   revalidatePath('/restaurant');
 }
@@ -99,6 +114,8 @@ export async function markDelivered(formData: FormData) {
     entityId: orderId,
     newValue: { status: 'Entregue' },
   });
+
+  await notifyCustomerOfStatus(db, orderId, 'Seu pedido foi entregue. Bom apetite!');
 
   revalidatePath('/courier');
   revalidatePath('/restaurant');

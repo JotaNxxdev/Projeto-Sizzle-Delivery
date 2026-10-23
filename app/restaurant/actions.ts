@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getCurrentProfile, type CurrentProfile } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { isValidImageUrl } from '@/lib/image-url';
+import { sendPushToUser } from '@/lib/push';
 import type { BusinessHours } from '@/lib/types';
 
 async function requireOwnerOf(restaurantId: string): Promise<{ profile: CurrentProfile; db: NonNullable<typeof supabase> }> {
@@ -21,6 +22,18 @@ async function requireOwnerOf(restaurantId: string): Promise<{ profile: CurrentP
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+// Notifica o cliente dono do pedido por push — melhor esforço, nunca
+// bloqueia a ação principal se falhar.
+async function notifyCustomerOfStatus(
+  db: NonNullable<typeof supabase>,
+  orderId: string,
+  body: string
+): Promise<void> {
+  const { data: order } = await db.from('orders').select('user_id, order_code').eq('id', orderId).single();
+  if (!order?.user_id) return;
+  await sendPushToUser(order.user_id, { title: `Pedido ${order.order_code}`, body, url: '/orders' });
 }
 
 export async function updateOrderStatusAsOwner(formData: FormData) {
@@ -42,6 +55,8 @@ export async function updateOrderStatusAsOwner(formData: FormData) {
     entityId: orderId,
     newValue: { status },
   });
+
+  await notifyCustomerOfStatus(db, orderId, `Status atualizado: ${status}`);
 
   revalidatePath('/restaurant');
 }
@@ -71,6 +86,8 @@ export async function acceptOrder(formData: FormData) {
     newValue: { status: 'Em Preparação' },
   });
 
+  await notifyCustomerOfStatus(db, orderId, 'Seu pedido foi aceito e já está em preparo!');
+
   revalidatePath('/restaurant');
 }
 
@@ -98,6 +115,8 @@ export async function rejectOrder(formData: FormData) {
     entityId: orderId,
     newValue: { status: 'Recusado', reason },
   });
+
+  await notifyCustomerOfStatus(db, orderId, `Seu pedido foi recusado: ${reason}`);
 
   revalidatePath('/restaurant');
   revalidatePath('/orders');

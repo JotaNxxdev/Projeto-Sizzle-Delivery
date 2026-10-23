@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SignOutButton from '@/components/SignOutButton';
+import PushNotificationToggle from '@/components/PushNotificationToggle';
 import { updateMyProfile } from './actions';
 import type { CurrentProfile } from '@/lib/auth';
 import { useToast } from '@/contexts/ToastContext';
@@ -90,6 +91,7 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
           </p>
           <p style={{ margin: '4px 0 12px', color: '#666' }}>{ROLE_LABEL[profile.role]}</p>
           <SignOutButton className="checkout-button" />
+          <PushNotificationToggle />
         </div>
 
         {(profile.role === 'admin' || profile.role === 'restaurant_owner' || profile.role === 'courier') && (
@@ -160,6 +162,9 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
         <ul className="profile-menu">
           <li>
             <a href="/orders">Histórico de Pedidos</a>
+          </li>
+          <li>
+            <a href="/favorites">Meus Favoritos</a>
           </li>
           <li>
             <a href="/profile/addresses">Meus Endereços</a>

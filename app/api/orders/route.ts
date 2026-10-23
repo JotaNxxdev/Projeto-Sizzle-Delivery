@@ -5,6 +5,11 @@ import { getCurrentProfile } from '@/lib/auth';
 import { createPixPayment } from '@/lib/mercadopago';
 import { validateCoupon } from '@/lib/coupons';
 import { isValidBrazilianPhone } from '@/lib/phone';
+import { isWithinBusinessHours } from '@/lib/business-hours';
+import { sendPushToUser } from '@/lib/push';
+import { formatCurrency } from '@/lib/format';
+import { resolveOrderItem } from '@/lib/order-pricing';
+import type { ResolvedOrderItem } from '@/lib/order-pricing';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
 
 interface IncomingItem {
@@ -13,9 +18,10 @@ interface IncomingItem {
   selectedValueIds?: string[];
 }
 
-// Teto por item — impede pedidos absurdos (ex.: milhares de unidades) que
-// contaminam relatórios/dashboard e não fazem sentido pra um delivery.
-const MAX_ITEM_QUANTITY = 50;
+// Janela permitida pra agendar um pedido: pelo menos 30min de antecedência
+// (tempo mínimo de preparo) e no máximo 7 dias à frente.
+const MIN_SCHEDULE_LEAD_MINUTES = 30;
+const MAX_SCHEDULE_DAYS_AHEAD = 7;
 
 interface CreateOrderBody {
   restaurantId?: string;
@@ -33,6 +39,7 @@ interface CreateOrderBody {
   paymentMethod?: PaymentMethod;
   changeFor?: number | null;
   couponCode?: string;
+  scheduledFor?: string;
 }
 
 function composeAddress(body: CreateOrderBody): string {
@@ -92,7 +99,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Restaurante não encontrado.' }, { status: 404 });
   }
 
-  if (!restaurant.isOpenNow) {
+  // Pedido agendado: valida a janela e o horário de funcionamento do
+  // restaurante NO MOMENTO AGENDADO, em vez de exigir que esteja aberto
+  // agora (afinal o pedido só vai ser preparado mais tarde).
+  let scheduledFor: Date | null = null;
+  if (body.scheduledFor) {
+    const parsed = new Date(body.scheduledFor);
+    const now = new Date();
+    const minAllowed = new Date(now.getTime() + MIN_SCHEDULE_LEAD_MINUTES * 60 * 1000);
+    const maxAllowed = new Date(now.getTime() + MAX_SCHEDULE_DAYS_AHEAD * 24 * 60 * 60 * 1000);
+
+    if (Number.isNaN(parsed.getTime()) || parsed < minAllowed || parsed > maxAllowed) {
+      return NextResponse.json(
+        {
+          error: `Horário de agendamento inválido. Escolha entre ${MIN_SCHEDULE_LEAD_MINUTES} minutos e ${MAX_SCHEDULE_DAYS_AHEAD} dias a partir de agora.`,
+        },
+        { status: 400 }
+      );
+    }
+    if (!isWithinBusinessHours(restaurant.businessHours, parsed)) {
+      return NextResponse.json(
+        { error: 'O restaurante está fechado nesse horário. Escolha outro horário dentro do funcionamento da loja.' },
+        { status: 400 }
+      );
+    }
+    scheduledFor = parsed;
+  } else if (!restaurant.isOpenNow) {
     return NextResponse.json({ error: 'Este restaurante está fechado no momento.' }, { status: 400 });
   }
 
@@ -106,57 +138,19 @@ export async function POST(request: NextRequest) {
   // do cardápio carregado no servidor (inclusive os adicionais escolhidos),
   // para o pedido não poder ser adulterado.
   let subtotal = 0;
-  const resolvedItems: {
-    name: string;
-    price: number;
-    quantity: number;
-    image: string;
-    options: { groupName: string; optionName: string; priceDelta: number }[];
-  }[] = [];
+  const resolvedItems: ResolvedOrderItem[] = [];
 
   for (const incoming of items) {
     const menuItem = restaurant.menu.find((item) => item.id === incoming.menuItemId);
-    if (
-      !menuItem ||
-      !Number.isInteger(incoming.quantity) ||
-      incoming.quantity <= 0 ||
-      incoming.quantity > MAX_ITEM_QUANTITY
-    ) {
-      return NextResponse.json(
-        { error: `Item do pedido inválido (quantidade máxima por item: ${MAX_ITEM_QUANTITY}).` },
-        { status: 400 }
-      );
-    }
-
     const selectedValueIds = Array.isArray(incoming.selectedValueIds) ? incoming.selectedValueIds : [];
-    const resolvedOptions: { groupName: string; optionName: string; priceDelta: number }[] = [];
-    let optionsPriceDelta = 0;
+    const result = resolveOrderItem(menuItem, incoming.quantity, selectedValueIds);
 
-    for (const group of menuItem.optionGroups) {
-      const selectedInGroup = group.values.filter((value) => selectedValueIds.includes(value.id));
-      if (selectedInGroup.length < group.minSelections || selectedInGroup.length > group.maxSelections) {
-        return NextResponse.json(
-          {
-            error: `Selecione entre ${group.minSelections} e ${group.maxSelections} opção(ões) em "${group.name}" para ${menuItem.name}.`,
-          },
-          { status: 400 }
-        );
-      }
-      for (const value of selectedInGroup) {
-        resolvedOptions.push({ groupName: group.name, optionName: value.name, priceDelta: value.priceDelta });
-        optionsPriceDelta += value.priceDelta;
-      }
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const unitPrice = menuItem.price + optionsPriceDelta;
-    subtotal += unitPrice * incoming.quantity;
-    resolvedItems.push({
-      name: menuItem.name,
-      price: unitPrice,
-      quantity: incoming.quantity,
-      image: menuItem.image,
-      options: resolvedOptions,
-    });
+    subtotal += result.item.price * result.item.quantity;
+    resolvedItems.push(result.item);
   }
 
   if (restaurant.minOrderValue > 0 && subtotal < restaurant.minOrderValue) {
@@ -213,6 +207,7 @@ export async function POST(request: NextRequest) {
       discount_amount: discountAmount,
       total,
       user_id: profile.id,
+      scheduled_for: scheduledFor ? scheduledFor.toISOString() : null,
     })
     .select()
     .single();
@@ -267,6 +262,26 @@ export async function POST(request: NextRequest) {
         console.error('[Sizzle] Erro ao salvar adicionais do item:', optionsError.message);
       }
     }
+  }
+
+  // Notifica o(s) dono(s) do restaurante por push — além do aviso sonoro
+  // que já existe dentro do painel, isso funciona com o app fechado.
+  if (!isSeedRestaurant) {
+    const { data: owners } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('restaurant_id', restaurant.id)
+      .eq('role', 'restaurant_owner');
+
+    await Promise.all(
+      (owners ?? []).map((owner) =>
+        sendPushToUser(owner.id, {
+          title: 'Novo pedido!',
+          body: `Pedido ${orderCode} — ${formatCurrency(total)}${scheduledFor ? ' (agendado)' : ''}`,
+          url: '/restaurant',
+        })
+      )
+    );
   }
 
   if (paymentMethod !== 'pix') {
@@ -336,7 +351,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, coupon_code, discount_amount, total, created_at, order_items(id, menu_item_name, price, quantity)'
+      'id, order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, coupon_code, discount_amount, total, created_at, scheduled_for, order_items(id, menu_item_name, price, quantity)'
     )
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
@@ -403,6 +418,7 @@ export async function GET() {
     discountAmount: Number(order.discount_amount),
     total: Number(order.total),
     date: new Date(order.created_at).toLocaleString('pt-BR'),
+    scheduledFor: order.scheduled_for ? new Date(order.scheduled_for).toLocaleString('pt-BR') : null,
     items: (order.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Restaurant } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+import FavoriteButton from '@/components/FavoriteButton';
 
 const CATEGORIES = [
   { id: 'pizza', label: 'Pizzas', icon: 'fa-pizza-slice' },
@@ -131,7 +132,10 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
                   className="restaurant-card"
                   style={!restaurant.isOpenNow ? { opacity: 0.6 } : undefined}
                 >
-                  <img src={restaurant.image} alt={restaurant.name} />
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img src={restaurant.image} alt={restaurant.name} />
+                    <FavoriteButton restaurantId={restaurant.id} />
+                  </div>
                   <div className="card-info">
                     <h3>
                       {restaurant.name}

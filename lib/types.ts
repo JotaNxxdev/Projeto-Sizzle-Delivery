@@ -182,5 +182,6 @@ export interface Order {
   discountAmount: number;
   total: number;
   date: string;
+  scheduledFor: string | null;
   review: OrderReview | null;
 }

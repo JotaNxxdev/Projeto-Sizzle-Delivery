@@ -77,6 +77,11 @@ export default async function RestaurantOrdersPage({
               <p>
                 <strong>Recebido em:</strong> {order.createdAt}
               </p>
+              {order.scheduledFor && (
+                <p style={{ color: '#b9770e', fontWeight: 600 }}>
+                  <i className="fas fa-clock" aria-hidden="true" /> Agendado para: {order.scheduledFor}
+                </p>
+              )}
               <p>
                 <strong>Recebe:</strong> {order.receiverName || 'Não informado'}
               </p>
