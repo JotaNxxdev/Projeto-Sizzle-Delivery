@@ -250,6 +250,33 @@ h2 {
     padding: 15px;
 }
 
+.favorite-button {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    padding: 0;
+}
+
+.favorite-button i {
+    color: #F26666;
+    font-size: 1rem;
+}
+
+.favorite-button-inline {
+    position: static;
+    margin-left: auto;
+}
+
 .card-info h3 {
     font-size: 1.1rem;
     margin: 0 0 5px;

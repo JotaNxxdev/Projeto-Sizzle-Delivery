@@ -38,6 +38,7 @@ export default async function RestaurantOwnerLayout({ children }: { children: Re
         <Link href="/restaurant/menu">Cardápio</Link>
         <Link href="/restaurant/couriers">Entregadores</Link>
         <Link href="/restaurant/coupons">Cupons</Link>
+        <Link href="/restaurant/customers">Clientes</Link>
         <Link href="/restaurant/reviews">Avaliações</Link>
         <Link href="/restaurant/settings">Loja</Link>
       </nav>

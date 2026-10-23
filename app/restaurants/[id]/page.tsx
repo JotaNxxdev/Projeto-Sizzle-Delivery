@@ -6,6 +6,7 @@ import { formatBusinessHoursSummary } from '@/lib/business-hours';
 import { formatCurrency } from '@/lib/format';
 import BackButton from '@/components/BackButton';
 import StarRating from '@/components/StarRating';
+import FavoriteButton from '@/components/FavoriteButton';
 import MenuClient from './MenuClient';
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +45,7 @@ export default async function RestaurantPage({ params }: { params: Promise<{ id:
       >
         <BackButton />
         <h1>{restaurant.name}</h1>
+        <FavoriteButton restaurantId={restaurant.id} variant="inline" />
       </header>
       <main className="app-main-menu">
         <p style={{ color: '#666', marginTop: 0, marginBottom: 10, fontSize: '0.9rem' }}>

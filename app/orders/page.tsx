@@ -142,6 +142,11 @@ export default function OrdersPage() {
                 <p>
                   <strong>Data:</strong> {order.date}
                 </p>
+                {order.scheduledFor && (
+                  <p>
+                    <strong>Agendado para:</strong> {order.scheduledFor}
+                  </p>
+                )}
                 <p>
                   <strong>Recebe:</strong> {order.receiverName || 'Não informado'}
                 </p>

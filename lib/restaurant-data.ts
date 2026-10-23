@@ -27,13 +27,14 @@ export interface OwnerOrderRow {
   total: number;
   createdAt: string;
   createdAtIso: string;
+  scheduledFor: string | null;
   courierId: string | null;
   courierName: string | null;
   items: { name: string; price: number; quantity: number; options: OwnerOrderItemOption[] }[];
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, courier_id, order_items(id, menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, scheduled_for, courier_id, order_items(id, menu_item_name, price, quantity)';
 
 // Busca os adicionais escolhidos de vários itens de pedido de uma vez
 // (mesmo padrão de busca em lote já usado nesse arquivo).
@@ -76,6 +77,7 @@ function mapOrderRow(
     delivery_fee: number | string;
     total: number | string;
     created_at: string;
+    scheduled_for: string | null;
     courier_id: string | null;
     order_items: { id: string; menu_item_name: string; price: number | string; quantity: number }[] | null;
   },
@@ -100,6 +102,7 @@ function mapOrderRow(
     total: Number(o.total),
     createdAt: new Date(o.created_at).toLocaleString('pt-BR'),
     createdAtIso: o.created_at,
+    scheduledFor: o.scheduled_for ? new Date(o.scheduled_for).toLocaleString('pt-BR') : null,
     courierId: o.courier_id,
     courierName: null, // preenchido depois por attachCourierNames
     items: (o.order_items ?? []).map((item) => ({
@@ -482,4 +485,70 @@ export async function getCouponsForRestaurant(restaurantId: string): Promise<Cou
     active: c.active,
     timesUsed: usageByCoupon.get(c.id) ?? 0,
   }));
+}
+
+export interface CustomerRow {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  orderCount: number;
+  totalSpent: number;
+  lastOrderAt: string;
+}
+
+// CRM simples: pra cada cliente que já pediu nessa loja, quantos pedidos
+// fez, quanto gastou de verdade (sem contar cancelado/recusado) e quando
+// foi o último pedido — ajuda o dono a identificar cliente frequente.
+export async function getCustomersForRestaurant(restaurantId: string): Promise<CustomerRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('user_id, total, status, created_at')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false })
+    .limit(2000);
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar clientes do restaurante:', error?.message);
+    return [];
+  }
+
+  const EXCLUDED_STATUSES = new Set(['Cancelado', 'Recusado']);
+  const statsByUser = new Map<string, { orderCount: number; totalSpent: number; lastOrderAtIso: string }>();
+
+  for (const order of data) {
+    if (!order.user_id) continue;
+    // Os pedidos já vêm ordenados do mais novo pro mais antigo, então o
+    // primeiro que aparece por usuário já é o último pedido dele.
+    const entry = statsByUser.get(order.user_id) ?? { orderCount: 0, totalSpent: 0, lastOrderAtIso: order.created_at };
+    entry.orderCount += 1;
+    if (!EXCLUDED_STATUSES.has(order.status)) {
+      entry.totalSpent += Number(order.total);
+    }
+    statsByUser.set(order.user_id, entry);
+  }
+
+  const userIds = Array.from(statsByUser.keys());
+  let profileById = new Map<string, { full_name: string | null; email: string; phone: string | null }>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase.from('profiles').select('id, full_name, email, phone').in('id', userIds);
+    profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  }
+
+  return Array.from(statsByUser.entries())
+    .map(([userId, stats]) => {
+      const profile = profileById.get(userId);
+      return {
+        userId,
+        name: profile?.full_name || profile?.email?.split('@')[0] || 'Cliente',
+        email: profile?.email ?? '—',
+        phone: profile?.phone ?? null,
+        orderCount: stats.orderCount,
+        totalSpent: stats.totalSpent,
+        lastOrderAt: new Date(stats.lastOrderAtIso).toLocaleDateString('pt-BR'),
+      };
+    })
+    .sort((a, b) => b.totalSpent - a.totalSpent);
 }
