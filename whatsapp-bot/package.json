@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
-    "baileys": "7.0.0-rc14",
+    "baileys": "6.7.24",
     "dotenv": "^16.4.5",
     "qrcode-terminal": "^0.12.0"
   },
