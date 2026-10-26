@@ -125,6 +125,11 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
 // então mostrar isso confunde — "Pagar na entrega" é o rótulo certo
 // enquanto o pagamento ainda não foi resolvido de outra forma.
 export function getPaymentStatusLabel(paymentMethod: PaymentMethod, paymentStatus: PaymentStatus): string {
+  // Pix combinado (via WhatsApp) nunca tem cobrança online rastreada — não
+  // faz sentido mostrar "aguardando pagamento" como se fosse o Pix do site.
+  if (paymentMethod === 'pix_manual') {
+    return 'Pix (combinado)';
+  }
   if (paymentMethod !== 'pix' && paymentStatus === 'pending') {
     return 'Pagar na entrega';
   }
@@ -138,12 +143,17 @@ export const DELIVERY_METHOD_LABEL: Record<DeliveryMethod, string> = {
   pickup: 'Retirada no local',
 };
 
-export type PaymentMethod = 'pix' | 'cash' | 'card';
+// 'pix' = cobrança online via Mercado Pago (site). 'pix_manual' = chave Pix
+// exibida pro cliente combinar o pagamento por fora (hoje só usado pelo bot
+// de WhatsApp, que não tem cobrança online) — nunca gera payment_status de
+// cobrança real, é só uma combinação entre as partes, igual dinheiro/cartão.
+export type PaymentMethod = 'pix' | 'cash' | 'card' | 'pix_manual';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   pix: 'Pix',
   cash: 'Dinheiro',
   card: 'Cartão na entrega',
+  pix_manual: 'Pix (combinado)',
 };
 
 export interface OrderAddress {
@@ -161,9 +171,12 @@ export interface OrderReview {
   restaurantReply: string | null;
 }
 
+export type OrderOrigin = 'web' | 'whatsapp';
+
 export interface Order {
   id: string;
   restaurantName: string;
+  origin: OrderOrigin;
   items: OrderItem[];
   notes: string | null;
   contact: string;

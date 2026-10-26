@@ -68,7 +68,24 @@ export default async function RestaurantOrdersPage({
         orders.map((order) => (
           <div className="order-item" key={order.id}>
             <div className="order-header">
-              <h4>Pedido #{order.orderCode}</h4>
+              <h4>
+                Pedido #{order.orderCode}
+                {order.origin === 'whatsapp' && (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#25D366',
+                      border: '1px solid #25D366',
+                      borderRadius: 999,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    <i className="fab fa-whatsapp" aria-hidden="true" /> WhatsApp
+                  </span>
+                )}
+              </h4>
               <span className={`order-status ${PAYMENT_STATUS_CLASS[order.paymentStatus] ?? 'pending'}`}>
                 {getPaymentStatusLabel(order.paymentMethod as PaymentMethod, order.paymentStatus as PaymentStatus)}
               </span>

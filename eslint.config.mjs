@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Serviço Node separado, com seu próprio tsconfig/lint/testes — não é
+    // uma app Next.js, então as regras de React Hooks daqui (que disparam
+    // falso-positivo em funções como "useMultiFileAuthState" do Baileys)
+    // não se aplicam a ele.
+    "whatsapp-bot/**",
+    "whatsapp-test-local/**",
   ]),
 ]);
 
