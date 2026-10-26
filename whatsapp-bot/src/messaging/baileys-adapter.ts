@@ -12,6 +12,10 @@ export interface BaileysAdapterOptions {
   // scripts/connect.ts). O index.ts (bootstrap de todos os restaurantes)
   // normalmente já espera a sessão existir — ver README sobre o pareamento.
   onQr?: (qr: string) => void;
+  // Disparado quando a conexão realmente abre (pareamento concluído) — usado
+  // por scripts/connect.ts pra saber a hora certa de encerrar o processo,
+  // em vez de um tempo fixo que pode expirar antes da pessoa escanear.
+  onOpen?: () => void;
 }
 
 function extractText(message: NonNullable<import('baileys').WAMessage['message']>): string | null {
@@ -49,6 +53,7 @@ export class BaileysAdapter implements MessagingAdapter {
 
       if (update.connection === 'open') {
         console.log(`[Bot ${this.options.restaurantId}] Conectado ao WhatsApp.`);
+        this.options.onOpen?.();
       }
 
       if (update.connection === 'close') {
