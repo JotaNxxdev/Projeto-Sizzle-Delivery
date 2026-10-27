@@ -35,15 +35,23 @@ export function createMessageHandler(restaurantId: string, adapter: MessagingAda
     const websiteUrl = `${config.apiBaseUrl}/restaurants/${restaurantId}`;
     let result = handleMessage(session.state, catalog, websiteUrl, message.text);
 
-    if (result.effect.type === 'pause_for_agent') {
-      await pauseSessionForAgent(session.id);
-    } else if (result.effect.type === 'request_preview') {
-      const preview = await previewOrder(restaurantId, result.state);
-      result = applyPreviewResult(result.state, preview);
-    } else if (result.effect.type === 'create_order') {
-      const restaurant = await getRestaurantForBot(restaurantId);
-      const created = await createOrder(restaurantId, message.phone, result.state, restaurant?.manualPixKey ?? null);
-      result = applyOrderResult(result.state, catalog, websiteUrl, created);
+    try {
+      if (result.effect.type === 'pause_for_agent') {
+        await pauseSessionForAgent(session.id);
+      } else if (result.effect.type === 'request_preview') {
+        const preview = await previewOrder(restaurantId, result.state);
+        result = applyPreviewResult(result.state, preview);
+      } else if (result.effect.type === 'create_order') {
+        const restaurant = await getRestaurantForBot(restaurantId);
+        const created = await createOrder(restaurantId, message.phone, result.state, restaurant?.manualPixKey ?? null);
+        result = applyOrderResult(result.state, catalog, websiteUrl, created);
+      }
+    } catch (err) {
+      // Rede, Supabase ou qualquer outra falha inesperada aqui não pode
+      // deixar o cliente sem resposta nenhuma — melhor avisar que algo deu
+      // errado do que a conversa "travar" em silêncio.
+      console.error(`[Bot ${restaurantId}] Erro inesperado processando mensagem de ${message.phone}:`, err);
+      result = { ...result, replies: ['Tivemos um problema aqui do nosso lado. Pode tentar de novo em um instante?'] };
     }
 
     await saveSession(session.id, result.state);

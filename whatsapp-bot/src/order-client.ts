@@ -8,14 +8,34 @@ export type PreviewResult =
 
 export type CreateOrderResult = { ok: true; orderCode: string; pixKey: string | null } | { ok: false; error: string };
 
+const API_TIMEOUT_MS = 15 * 1000;
+
+// Sem timeout aqui, um site fora do ar (deploy travado, domínio errado em
+// SIZZLE_API_BASE_URL etc.) deixava esse fetch pendurado pra sempre — e com
+// isso a conversa inteira "travava" no passo de pagamento, sem erro nenhum
+// no terminal pro dono perceber. Com timeout + catch, sempre volta um
+// { ok: false, error } dentro de 15s, que o flow.ts já sabe transformar
+// numa mensagem pro cliente ("Não foi possível calcular o pedido: ...").
 async function callBotApi(path: string, body: unknown): Promise<{ ok: boolean; status: number; json: Record<string, unknown> }> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-sizzle-bot-token': config.botApiToken },
-    body: JSON.stringify(body),
-  });
-  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: response.ok, status: response.status, json };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.apiBaseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-sizzle-bot-token': config.botApiToken },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: response.ok, status: response.status, json };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    console.error(`[order-client] Falha ao chamar ${path}:`, aborted ? `timeout após ${API_TIMEOUT_MS}ms` : err);
+    return { ok: false, status: 0, json: { error: aborted ? 'O site demorou demais pra responder.' : 'Não foi possível conectar ao site.' } };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Junta as observações de cada item numa única anotação do pedido — o
