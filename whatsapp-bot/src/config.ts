@@ -24,4 +24,8 @@ export const config = {
   rateLimitMaxMessages: intEnv('RATE_LIMIT_MAX_MESSAGES', 20),
   rateLimitWindowSeconds: intEnv('RATE_LIMIT_WINDOW_SECONDS', 60),
   pauseAutoExpireHours: intEnv('PAUSE_AUTO_EXPIRE_HOURS', 4),
+  // Porta do servidor HTTP interno que o site chama pra iniciar o
+  // pareamento e buscar o QR Code (tela /restaurant/whatsapp). Precisa
+  // ficar atrás de HTTPS/reverse proxy no VPS — ver whatsapp-bot/README.md.
+  pairingServerPort: intEnv('PAIRING_SERVER_PORT', 3344),
 };

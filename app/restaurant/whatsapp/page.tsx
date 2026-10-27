@@ -1,6 +1,8 @@
 import { getCurrentProfile } from '@/lib/auth';
-import { getPausedWhatsappSessions } from '@/lib/restaurant-data';
+import { getPausedWhatsappSessions, isWhatsappBotEnabledForRestaurant } from '@/lib/restaurant-data';
+import { isWhatsappBotConfigured } from '@/lib/whatsapp-bot-client';
 import { reactivateWhatsappSession } from '../actions';
+import WhatsappPairing from './WhatsappPairing';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,11 +10,24 @@ export default async function WhatsappSessionsPage() {
   const profile = await getCurrentProfile();
   if (!profile?.restaurantId) return null;
 
-  const sessions = await getPausedWhatsappSessions(profile.restaurantId);
+  const [sessions, connected] = await Promise.all([
+    getPausedWhatsappSessions(profile.restaurantId),
+    isWhatsappBotEnabledForRestaurant(profile.restaurantId),
+  ]);
 
   return (
     <div>
-      <h2>Atendimento pausado no WhatsApp</h2>
+      <h2>Configurar WhatsApp</h2>
+      {isWhatsappBotConfigured ? (
+        <WhatsappPairing initiallyConnected={connected} />
+      ) : (
+        <p className="empty-state" style={{ textAlign: 'left' }}>
+          O bot de WhatsApp ainda não foi publicado nesta instância (variáveis WHATSAPP_BOT_URL /
+          WHATSAPP_BOT_API_TOKEN não configuradas). Veja whatsapp-bot/README.md.
+        </p>
+      )}
+
+      <h2 style={{ marginTop: 24 }}>Atendimento pausado no WhatsApp</h2>
       <p className="empty-state" style={{ textAlign: 'left', marginBottom: 16 }}>
         Quando um cliente pede para falar com um atendente no bot do WhatsApp, o robô para de responder aquele
         número até você clicar em &quot;Reativar&quot; aqui — depois de resolver por fora (ligando, chamando no

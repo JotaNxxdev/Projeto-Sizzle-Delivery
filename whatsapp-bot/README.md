@@ -60,6 +60,7 @@ Copie `.env.example` pra `.env` e preencha (veja os comentários no arquivo):
 | `SESSION_EXPIRY_MINUTES` | Depois de quanto tempo sem mensagem a conversa reseta (padrão 30) |
 | `RATE_LIMIT_MAX_MESSAGES` / `RATE_LIMIT_WINDOW_SECONDS` | Limite de mensagens por cliente, pra evitar spam |
 | `PAUSE_AUTO_EXPIRE_HOURS` | Depois de quanto tempo uma pausa de "atendente" esquecida expira sozinha |
+| `PAIRING_SERVER_PORT` | Porta do servidor de pareamento usado pela tela "Configurar WhatsApp" do painel (padrão `3344`) — ver "Expondo o servidor de pareamento" |
 
 **Nunca** commite o `.env` nem coloque essas variáveis em código do site — o
 `WHATSAPP_BOT_API_TOKEN` em especial dá permissão de criar pedido em nome de
@@ -79,13 +80,28 @@ Cada restaurante usa **um número de WhatsApp próprio** (de preferência um chi
 separado, nunca o WhatsApp pessoal de alguém — a biblioteca é não-oficial e o
 número conectado corre risco de ser suspenso pelo WhatsApp).
 
+### Opção 1 — pelo painel do dono (recomendado)
+
+Com o processo principal (`npm start` / PM2) rodando e o servidor de
+pareamento acessível pelo site (ver "Expondo o servidor de pareamento"
+abaixo), o próprio dono do restaurante faz tudo sem acesso ao VPS:
+
+1. No site, **Painel do Restaurante → WhatsApp → Configurar WhatsApp**.
+2. Clica em "Gerar QR Code" e escaneia com **WhatsApp → Configurações →
+   Dispositivos conectados → Conectar um dispositivo**, no celular do número
+   que vai atender.
+3. A tela atualiza sozinha e mostra "WhatsApp conectado" assim que a conexão
+   abre — o bot já habilita `whatsapp_bot_enabled` e começa a atender esse
+   número automaticamente, sem precisar de nenhum passo manual no banco.
+
+### Opção 2 — direto no terminal do VPS (sem precisar expor nada pra internet)
+
 1. Pegue o `id` do restaurante (no painel do dono, ou direto no Supabase, tabela `restaurants`).
 2. Rode:
    ```bash
    npm run connect -- <restaurantId>
    ```
-3. Um QR Code aparece no terminal. No celular do número que vai atender:
-   **WhatsApp → Configurações → Dispositivos conectados → Conectar um dispositivo** → escaneie.
+3. Um QR Code aparece no terminal. Escaneie do mesmo jeito da opção 1.
 4. Depois de conectar, o script encerra sozinho e mostra o comando SQL pra habilitar o bot:
    ```sql
    update restaurants set whatsapp_bot_enabled = true where id = '<restaurantId>';
@@ -94,6 +110,30 @@ número conectado corre risco de ser suspenso pelo WhatsApp).
    subir, esse restaurante já entra na lista e usa a sessão salva — **sem pedir QR Code de novo**.
 
 Repita pra cada restaurante que for usar o bot.
+
+## Expondo o servidor de pareamento (pra Opção 1 funcionar)
+
+O processo principal já sobe, junto com as sessões do WhatsApp, um servidor
+HTTP interno na porta `PAIRING_SERVER_PORT` (padrão `3344`) — é ele que o site
+chama pra iniciar o pareamento e buscar o QR Code. Essa porta **não deve ser
+exposta direto pra internet**: coloque um reverse proxy com HTTPS na frente
+(nginx + certbot, Caddy, etc.) e aponte um subdomínio pra ela, por exemplo:
+
+```nginx
+server {
+  server_name bot.seu-dominio.com;
+  location / {
+    proxy_pass http://127.0.0.1:3344;
+  }
+}
+```
+
+Depois, nas variáveis de ambiente do **site** (Vercel), configure
+`WHATSAPP_BOT_URL=https://bot.seu-dominio.com` e `WHATSAPP_BOT_API_TOKEN` com
+o **mesmo valor** usado no `.env` do bot. Sem essas duas variáveis no site, a
+tela "Configurar WhatsApp" mostra um aviso e a Opção 2 continua funcionando
+normalmente — o bot em si nunca depende desse servidor pra atender mensagem,
+só pro pareamento inicial pelo painel.
 
 ## Subindo no VPS com PM2
 
