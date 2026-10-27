@@ -220,7 +220,9 @@ dono desconectar e conectar de novo — nenhuma outra mudança é necessária.
    (marcando Production, Preview e Development): `SUPABASE_URL`,
    `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e, se for usar Pix,
-   `MERCADOPAGO_CLIENT_ID` e `MERCADOPAGO_CLIENT_SECRET`.
+   `MERCADOPAGO_CLIENT_ID` e `MERCADOPAGO_CLIENT_SECRET`. Se for usar o bot
+   de WhatsApp (`whatsapp-bot/README.md`), adicione também
+   `WHATSAPP_BOT_API_TOKEN` e `WHATSAPP_BOT_URL`.
 4. Deploy. O build usa `next build` automaticamente.
 5. Se for usar Pix, cadastre a URL de redirecionamento de produção
    (`https://SEU-APP.vercel.app/api/mercadopago/callback`) nas

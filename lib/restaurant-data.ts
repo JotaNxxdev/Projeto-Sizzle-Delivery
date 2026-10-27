@@ -595,3 +595,17 @@ export async function getPausedWhatsappSessions(restaurantId: string): Promise<P
     lastInteractionAt: new Date(row.last_interaction_at).toLocaleString('pt-BR'),
   }));
 }
+
+// Se o número do restaurante já está pareado e atendendo (habilitado pelo
+// próprio pareamento — ver whatsapp-bot/src/bot-runtime.ts — ou manualmente
+// no banco). Usado só pra decidir o que mostrar em "Configurar WhatsApp".
+export async function isWhatsappBotEnabledForRestaurant(restaurantId: string): Promise<boolean> {
+  if (!supabase) return false;
+
+  const { data, error } = await supabase.from('restaurants').select('whatsapp_bot_enabled').eq('id', restaurantId).maybeSingle();
+  if (error) {
+    console.error('[Sizzle] Erro ao verificar whatsapp_bot_enabled:', error.message);
+    return false;
+  }
+  return Boolean(data?.whatsapp_bot_enabled);
+}
