@@ -49,8 +49,8 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 ::selection {
-    background-color: var(--color-brand-200);
-    color: var(--color-brand-900);
+    background-color: var(--color-brand-600);
+    color: var(--color-gray-0);
 }
 
 #app-container {
@@ -100,7 +100,7 @@ input[type='number']::-webkit-inner-spin-button {
 
 /* Estilos do cabeçalho */
 .app-header {
-    background-color: var(--color-gray-900);
+    background-color: var(--color-ink);
     padding: var(--space-5);
     box-shadow: var(--shadow-sm);
 }
@@ -129,7 +129,7 @@ input[type='number']::-webkit-inner-spin-button {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     border-radius: var(--radius-full);
     padding: var(--space-3) var(--space-4);
     box-shadow: var(--shadow-sm);
@@ -419,9 +419,9 @@ h2 {
 
 /* Estilos para a tela do menu do restaurante */
 .app-header-menu {
-    background-color: #fff;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-5);
     display: flex;
     align-items: center;
 }
@@ -429,12 +429,13 @@ h2 {
 .app-header-menu h1 {
     font-size: 1.2rem;
     margin: 0;
+    color: var(--color-text);
 }
 
 .back-button {
     font-size: 1.5rem;
-    color: #43B55C;
-    margin-right: 20px;
+    color: var(--color-brand-500);
+    margin-right: var(--space-5);
     cursor: pointer;
 }
 
@@ -635,7 +636,7 @@ h2 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     color: var(--color-text);
     border: none;
     border-radius: var(--radius-full);
@@ -658,7 +659,7 @@ h2 {
 }
 
 .quantity-btn:hover {
-    background-color: var(--color-gray-200);
+    background-color: var(--color-gray-300);
 }
 
 .quantity-btn:focus-visible {
@@ -745,7 +746,7 @@ h2 {
 }
 
 .auth-banner {
-    background-color: var(--color-gray-900);
+    background-color: var(--color-ink);
     padding: var(--space-6) var(--space-4);
     display: flex;
     justify-content: center;
@@ -875,7 +876,7 @@ h2 {
     border-radius: var(--radius-md);
     font-size: var(--text-base);
     font-family: inherit;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -1092,7 +1093,7 @@ h2 {
     display: flex;
     gap: 2px;
     padding: 0 var(--space-4);
-    background: var(--color-gray-900);
+    background: var(--color-ink);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -1126,7 +1127,7 @@ h2 {
 }
 
 .admin-tab:hover {
-    color: var(--color-gray-100);
+    color: var(--color-gray-800);
 }
 
 .admin-tab:hover i {
@@ -1208,7 +1209,7 @@ h2 {
     font-size: var(--text-sm);
     font-family: inherit;
     min-width: 0;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
 }
 
 .admin-btn {
@@ -1229,7 +1230,7 @@ h2 {
     border: 1px solid var(--color-gray-300);
     border-radius: var(--radius-md);
     cursor: pointer;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
 }
 
 .mp-connected-notice {
@@ -1293,7 +1294,7 @@ h2 {
     align-items: center;
     gap: var(--space-3);
     padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-gray-100);
+    border-bottom: 1px solid var(--color-gray-200);
 }
 
 .option-value-list li:last-child {
@@ -1454,7 +1455,7 @@ h2 {
     gap: var(--space-2);
     flex-wrap: wrap;
     padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--color-gray-100);
+    border-bottom: 1px solid var(--color-gray-200);
 }
 
 .business-hours-day {
@@ -1482,7 +1483,7 @@ h2 {
     font-family: inherit;
     flex: 1;
     min-width: 90px;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
 }
 
 @media (max-width: 420px) {
@@ -1602,18 +1603,21 @@ h2 {
     line-height: 1;
 }
 
+/* A comanda é sempre clara, mesmo com o resto do site no tema escuro —
+   é feita pra sair impressa em papel branco, cor fixa (não usa os tokens
+   de tema) de propósito. */
 .comanda {
     max-width: 480px;
     margin: 24px auto;
     padding: 0 24px 36px;
     font-family: var(--font-sans);
-    background-color: var(--color-gray-0);
-    color: var(--color-gray-900);
+    background-color: #ffffff;
+    color: #18181b;
 }
 
 .comanda-header {
-    background-color: var(--color-gray-900);
-    color: var(--color-gray-0);
+    background-color: #18181b;
+    color: #ffffff;
     border-radius: 16px;
     padding: 26px 28px;
     display: flex;
@@ -1850,13 +1854,13 @@ h2 {
 }
 
 .toast {
-    background-color: #222;
-    color: #fff;
+    background-color: var(--color-gray-200);
+    color: var(--color-gray-900);
     padding: 12px 18px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    box-shadow: var(--shadow-md);
     max-width: 400px;
     text-align: center;
     animation: toast-in 0.2s ease-out;
@@ -1871,7 +1875,7 @@ h2 {
 }
 
 .toast-info {
-    background-color: var(--color-gray-800);
+    background-color: var(--color-gray-200);
 }
 
 @keyframes toast-in {
@@ -1952,13 +1956,13 @@ h2 {
 }
 
 .ui-button-secondary {
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     border-color: var(--color-gray-300);
     color: var(--color-text);
 }
 
 .ui-button-secondary:hover:not(:disabled) {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     border-color: var(--color-gray-400);
 }
 
@@ -1968,7 +1972,7 @@ h2 {
 }
 
 .ui-button-ghost:hover:not(:disabled) {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     color: var(--color-text);
 }
 
@@ -2033,7 +2037,7 @@ h2 {
 .ui-input,
 .ui-textarea {
     width: 100%;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     border: 1px solid var(--color-gray-300);
     border-radius: var(--radius-md);
     padding: 0 var(--space-3);
@@ -2069,7 +2073,7 @@ h2 {
 
 .ui-input:disabled,
 .ui-textarea:disabled {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     color: var(--color-text-subtle);
     cursor: not-allowed;
 }
@@ -2103,7 +2107,7 @@ textarea.ui-input-wrap-error {
     appearance: none;
     width: 100%;
     height: 44px;
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     border: 1px solid var(--color-gray-300);
     border-radius: var(--radius-md);
     padding: 0 var(--space-8) 0 var(--space-3);
@@ -2123,7 +2127,7 @@ textarea.ui-input-wrap-error {
 }
 
 .ui-select:disabled {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     color: var(--color-text-subtle);
     cursor: not-allowed;
 }
@@ -2168,7 +2172,7 @@ textarea.ui-input-wrap-error {
     height: 20px;
     flex-shrink: 0;
     border: 1.5px solid var(--color-gray-300);
-    background-color: var(--color-gray-0);
+    background-color: var(--color-surface);
     cursor: pointer;
     background-repeat: no-repeat;
     background-position: center;
@@ -2387,7 +2391,7 @@ textarea.ui-input-wrap-error {
 }
 
 .ui-badge-neutral {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
     color: var(--color-gray-700);
 }
 
@@ -2421,7 +2425,7 @@ textarea.ui-input-wrap-error {
     display: inline-flex;
     gap: var(--space-1);
     padding: var(--space-1);
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-50);
     border-radius: var(--radius-md);
 }
 
@@ -2501,7 +2505,7 @@ textarea.ui-input-wrap-error {
 }
 
 .ui-modal-close:hover {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-200);
 }
 
 .ui-modal-close:focus-visible {
@@ -2635,7 +2639,7 @@ textarea.ui-input-wrap-error {
         justify-content: space-between;
         gap: var(--space-4);
         padding: var(--space-2) 0;
-        border-bottom: 1px solid var(--color-gray-100);
+        border-bottom: 1px solid var(--color-gray-200);
         text-align: right;
     }
 

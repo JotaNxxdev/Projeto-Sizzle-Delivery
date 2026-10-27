@@ -2,62 +2,78 @@
  * Design tokens do Sizzle Delivery — fonte única de verdade pra cor,
  * tipografia, espaçamento, raio de borda, sombra e transição. Nenhum
  * componente deve usar um hex, px ou ms "solto" fora daqui.
+ *
+ * Tema escuro, verde como cor de marca (troca pedida depois do redesign
+ * em laranja/tema claro — ver histórico). A .comanda de impressão é a
+ * única exceção: fica sempre clara (hex fixo, fora desses tokens), por
+ * ser feita pra sair em papel branco.
  */
 
 :root {
-  /* ---- Marca (laranja/vermelho quente) ---- */
-  --color-brand-50: #fff4f0;
-  --color-brand-100: #ffe3d9;
-  --color-brand-200: #ffc2ae;
-  --color-brand-300: #ff9d7d;
-  --color-brand-400: #ff7a52;
-  --color-brand-500: #f4502a; /* cor de marca principal */
-  --color-brand-600: #db3a17;
-  --color-brand-700: #b32d11;
-  --color-brand-800: #8c2410;
-  --color-brand-900: #6b1c0d;
+  /* ---- Marca (verde) ---- */
+  /* 50/100/200 só são usados como fundo de destaque (nunca como texto),
+     por isso são sobreposições translúcidas — fica certo em cima de
+     qualquer tom escuro de superfície, sem precisar de um par claro/escuro
+     cada um. */
+  --color-brand-50: rgba(34, 197, 94, 0.12);
+  --color-brand-100: rgba(34, 197, 94, 0.2);
+  --color-brand-200: rgba(34, 197, 94, 0.32);
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e; /* cor de marca principal */
+  --color-brand-600: #16a34a;
+  --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
 
-  /* ---- Neutros ---- */
+  /* ---- Neutros (escala pensada pro tema escuro: gray-50 = mais escuro,
+     gray-900 = quase branco — o nome é só o passo na escala, não a
+     luminosidade literal) ---- */
   --color-gray-0: #ffffff;
-  --color-gray-50: #fafafa;
-  --color-gray-100: #f4f4f5;
-  --color-gray-200: #e4e4e7;
-  --color-gray-300: #d4d4d8;
-  --color-gray-400: #a1a1aa;
-  --color-gray-500: #71717a;
-  --color-gray-600: #52525b;
-  --color-gray-700: #3f3f46;
-  --color-gray-800: #27272a;
-  --color-gray-900: #18181b;
+  --color-gray-50: #0a0a0b;
+  --color-gray-100: #161718;
+  --color-gray-200: #26282a;
+  --color-gray-300: #37393c;
+  --color-gray-400: #6b6e72;
+  --color-gray-500: #9a9da1;
+  --color-gray-600: #b7b9bd;
+  --color-gray-700: #cfd1d4;
+  --color-gray-800: #e4e5e7;
+  --color-gray-900: #f7f7f8;
 
-  /* ---- Status ---- */
-  --color-success-bg: #ecfdf3;
-  --color-success-border: #86efac;
-  --color-success: #16a34a;
-  --color-success-fg: #15803d;
+  /* ---- Status (fundo em baixa opacidade sobre o tema escuro) ---- */
+  --color-success-bg: rgba(34, 197, 94, 0.16);
+  --color-success-border: rgba(34, 197, 94, 0.4);
+  --color-success: #22c55e;
+  --color-success-fg: #4ade80;
 
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fcd34d;
-  --color-warning: #d97706;
-  --color-warning-fg: #b45309;
+  --color-warning-bg: rgba(245, 158, 11, 0.16);
+  --color-warning-border: rgba(245, 158, 11, 0.4);
+  --color-warning: #f59e0b;
+  --color-warning-fg: #fbbf24;
 
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fca5a5;
-  --color-danger: #dc2626;
-  --color-danger-fg: #b91c1c;
+  --color-danger-bg: rgba(239, 68, 68, 0.16);
+  --color-danger-border: rgba(239, 68, 68, 0.4);
+  --color-danger: #ef4444;
+  --color-danger-fg: #f87171;
 
-  --color-info-bg: #eff6ff;
-  --color-info-border: #93c5fd;
-  --color-info: #2563eb;
-  --color-info-fg: #1d4ed8;
+  --color-info-bg: rgba(59, 130, 246, 0.16);
+  --color-info-border: rgba(59, 130, 246, 0.4);
+  --color-info: #3b82f6;
+  --color-info-fg: #60a5fa;
 
   /* ---- Superfícies ---- */
   --color-bg: var(--color-gray-50);
-  --color-surface: var(--color-gray-0);
+  --color-surface: var(--color-gray-100);
   --color-border: var(--color-gray-200);
   --color-text: var(--color-gray-900);
   --color-text-muted: var(--color-gray-500);
   --color-text-subtle: var(--color-gray-400);
+
+  /* Faixas decorativas sempre escuras (header da home, barra de abas do
+     admin, banner de login) — não é a mesma coisa que --color-bg: fica
+     fixo nesse tom mesmo se um dia o site ganhar um tema claro opcional. */
+  --color-ink: #050506;
 
   /* ---- Tipografia (Inter, carregada em app/layout.tsx) ---- */
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -98,17 +114,18 @@
   --radius-xl: 16px; /* cards grandes, modais */
   --radius-full: 999px; /* pills, badges, avatar */
 
-  /* ---- Sombra (3 níveis) ---- */
-  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
-  --shadow-md: 0 4px 16px rgba(24, 24, 27, 0.08);
-  --shadow-lg: 0 16px 40px rgba(24, 24, 27, 0.14);
+  /* ---- Sombra (3 níveis — mais opacas que num tema claro, pra aparecer
+     contra o fundo escuro) ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
 
   /* ---- Transição ---- */
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
 
   /* ---- Foco acessível ---- */
-  --focus-ring: 0 0 0 3px rgba(244, 80, 42, 0.35);
+  --focus-ring: 0 0 0 3px rgba(34, 197, 94, 0.4);
 
   /* ---- Camadas ---- */
   --z-dropdown: 20;
