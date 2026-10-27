@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createAuthBrowserClient } from '@/lib/supabase-auth-browser';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -47,43 +49,36 @@ export default function SignupPage() {
 
   if (needsEmailConfirmation) {
     return (
-      <div className="screen">
-        <header className="app-header-menu">
-          <h1>Cadastro</h1>
-        </header>
-        <main className="app-main-menu">
-          <p className="empty-state">
-            Quase lá! Enviamos um e-mail de confirmação para <strong>{email}</strong>. Confirme para poder entrar.
-          </p>
-        </main>
+      <div className="auth-screen">
+        <div className="auth-banner">
+          <img src="/LOGOR.png" alt="Sizzle" />
+        </div>
+        <div className="auth-body">
+          <div className="auth-card">
+            <h1 className="auth-title">Quase lá!</h1>
+            <p className="auth-message">
+              Enviamos um e-mail de confirmação para <strong>{email}</strong>. Confirme para poder entrar.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="screen">
-      <header className="app-header-menu">
-        <h1>Criar conta</h1>
-      </header>
-      <main className="app-main-menu">
-        <form className="checkout-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="name">Nome</label>
-            <input id="name" type="text" required value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Senha</label>
-            <input
+    <div className="auth-screen">
+      <div className="auth-banner">
+        <img src="/LOGOR.png" alt="Sizzle" />
+      </div>
+      <div className="auth-body">
+        <div className="auth-card">
+          <h1 className="auth-title">Criar conta</h1>
+          <p className="auth-subtitle">Peça nos melhores restaurantes perto de você</p>
+          <form onSubmit={handleSubmit}>
+            <Input label="Nome" id="name" type="text" required value={name} onChange={(event) => setName(event.target.value)} />
+            <Input label="E-mail" id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+            <Input
+              label="Senha"
               id="password"
               type="password"
               required
@@ -91,16 +86,16 @@ export default function SignupPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-          </div>
-          {error && <p className="empty-state">{error}</p>}
-          <button className="checkout-button" type="submit" disabled={submitting}>
-            {submitting ? 'Criando conta...' : 'Criar conta'}
-          </button>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20 }}>
-          Já tem conta? <Link href="/login">Entrar</Link>
-        </p>
-      </main>
+            {error && <p className="ui-field-error" style={{ marginBottom: 'var(--space-4)' }}>{error}</p>}
+            <Button type="submit" variant="primary" fullWidth loading={submitting}>
+              Criar conta
+            </Button>
+          </form>
+          <p className="auth-footer">
+            Já tem conta? <Link href="/login">Entrar</Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

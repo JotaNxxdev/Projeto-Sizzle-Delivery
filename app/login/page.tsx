@@ -4,6 +4,8 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createAuthBrowserClient } from '@/lib/supabase-auth-browser';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 function LoginForm() {
   const router = useRouter();
@@ -36,44 +38,37 @@ function LoginForm() {
   }
 
   return (
-    <div className="screen">
-      <header className="app-header-menu">
-        <h1>Entrar</h1>
-      </header>
-      <main className="app-main-menu">
-        <form className="checkout-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Senha</label>
-            <input
+    <div className="auth-screen">
+      <div className="auth-banner">
+        <img src="/LOGOR.png" alt="Sizzle" />
+      </div>
+      <div className="auth-body">
+        <div className="auth-card">
+          <h1 className="auth-title">Entrar</h1>
+          <p className="auth-subtitle">Bem-vindo de volta ao Sizzle</p>
+          <form onSubmit={handleSubmit}>
+            <Input label="E-mail" id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+            <Input
+              label="Senha"
               id="password"
               type="password"
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-          </div>
-          {error && <p className="empty-state">{error}</p>}
-          <button className="checkout-button" type="submit" disabled={submitting}>
-            {submitting ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20 }}>
-          <Link href="/forgot-password">Esqueci minha senha</Link>
-        </p>
-        <p style={{ textAlign: 'center', marginTop: 10 }}>
-          Não tem conta? <Link href="/signup">Cadastre-se</Link>
-        </p>
-      </main>
+            {error && <p className="ui-field-error" style={{ marginBottom: 'var(--space-4)' }}>{error}</p>}
+            <Button type="submit" variant="primary" fullWidth loading={submitting}>
+              Entrar
+            </Button>
+          </form>
+          <p className="auth-footer">
+            <Link href="/forgot-password">Esqueci minha senha</Link>
+          </p>
+          <p className="auth-footer">
+            Não tem conta? <Link href="/signup">Cadastre-se</Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

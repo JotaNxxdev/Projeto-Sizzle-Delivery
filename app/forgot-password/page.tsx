@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createAuthBrowserClient } from '@/lib/supabase-auth-browser';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -32,52 +34,47 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="screen">
-        <header className="app-header-menu">
-          <h1>Esqueci minha senha</h1>
-        </header>
-        <main className="app-main-menu">
-          <p className="empty-state">
-            Se <strong>{email}</strong> estiver cadastrado, enviamos um link pra redefinir a senha. Confira sua caixa
-            de entrada (e o spam).
-          </p>
-          <p style={{ textAlign: 'center', marginTop: 20 }}>
-            <Link href="/login">Voltar para o login</Link>
-          </p>
-        </main>
+      <div className="auth-screen">
+        <div className="auth-banner">
+          <img src="/LOGOR.png" alt="Sizzle" />
+        </div>
+        <div className="auth-body">
+          <div className="auth-card">
+            <h1 className="auth-title">Verifique seu e-mail</h1>
+            <p className="auth-message">
+              Se <strong>{email}</strong> estiver cadastrado, enviamos um link pra redefinir a senha. Confira sua caixa de
+              entrada (e o spam).
+            </p>
+            <p className="auth-footer">
+              <Link href="/login">Voltar para o login</Link>
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="screen">
-      <header className="app-header-menu">
-        <h1>Esqueci minha senha</h1>
-      </header>
-      <main className="app-main-menu">
-        <p style={{ color: '#666', marginTop: 0 }}>
-          Informe seu e-mail e enviaremos um link pra você criar uma nova senha.
-        </p>
-        <form className="checkout-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </div>
-          {error && <p className="empty-state">{error}</p>}
-          <button className="checkout-button" type="submit" disabled={submitting}>
-            {submitting ? 'Enviando...' : 'Enviar link de redefinição'}
-          </button>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: 20 }}>
-          <Link href="/login">Voltar para o login</Link>
-        </p>
-      </main>
+    <div className="auth-screen">
+      <div className="auth-banner">
+        <img src="/LOGOR.png" alt="Sizzle" />
+      </div>
+      <div className="auth-body">
+        <div className="auth-card">
+          <h1 className="auth-title">Esqueci minha senha</h1>
+          <p className="auth-subtitle">Informe seu e-mail e enviaremos um link pra você criar uma nova senha.</p>
+          <form onSubmit={handleSubmit}>
+            <Input label="E-mail" id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+            {error && <p className="ui-field-error" style={{ marginBottom: 'var(--space-4)' }}>{error}</p>}
+            <Button type="submit" variant="primary" fullWidth loading={submitting}>
+              Enviar link de redefinição
+            </Button>
+          </form>
+          <p className="auth-footer">
+            <Link href="/login">Voltar para o login</Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
