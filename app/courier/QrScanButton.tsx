@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { QrCode } from 'lucide-react';
+import Button from '@/components/ui/Button';
 
 // BarcodeDetector ainda não tem tipos oficiais na lib DOM do TypeScript.
 interface BarcodeDetectorResult {
@@ -105,32 +107,28 @@ export default function QrScanButton({ onScan }: { onScan: (code: string) => voi
   if (!supported) return null;
 
   return (
-    <div style={{ marginBottom: 15 }}>
+    <div style={{ marginBottom: 'var(--space-4)' }}>
       {!scanning ? (
-        <button
+        <Button
           type="button"
-          className="quantity-btn admin-btn"
+          variant="secondary"
+          icon={<QrCode size={16} aria-hidden="true" />}
           onClick={() => {
             setScanError(null);
             setScanning(true);
           }}
         >
-          <i className="fas fa-qrcode" aria-hidden="true" /> Escanear QR code
-        </button>
+          Escanear QR code
+        </Button>
       ) : (
         <div>
           <video ref={videoRef} className="qr-scanner-video" muted playsInline />
-          <button
-            type="button"
-            className="quantity-btn admin-btn"
-            style={{ marginTop: 10 }}
-            onClick={() => setScanning(false)}
-          >
+          <Button type="button" variant="secondary" style={{ marginTop: 'var(--space-3)' }} onClick={() => setScanning(false)}>
             Cancelar
-          </button>
+          </Button>
         </div>
       )}
-      {scanError && <p className="empty-state">{scanError}</p>}
+      {scanError && <p className="hint-text">{scanError}</p>}
     </div>
   );
 }

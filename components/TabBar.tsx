@@ -3,13 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export interface TabBarItem {
   href: string;
   label: string;
-  // Classe completa do Font Awesome, ex. "fas fa-store" (sólido) ou
-  // "fab fa-whatsapp" (ícone de marca — fica em pacote CSS diferente).
-  icon: string;
+  icon: LucideIcon;
   // Só a página exata conta como ativa (nunca como "pai" de uma sub-rota).
   // Precisa em qualquer aba cujo href seja prefixo de outra (ex.: "/restaurant"
   // é prefixo de "/restaurant/menu" — sem isso as duas ficariam acesas juntas).
@@ -52,6 +51,7 @@ export default function TabBar({ tabs, ariaLabel }: { tabs: TabBarItem[]; ariaLa
     <nav className="admin-tabs" ref={navRef} aria-label={ariaLabel}>
       {tabs.map((tab) => {
         const active = tab.href === activeHref;
+        const Icon = tab.icon;
         return (
           <Link
             key={tab.href}
@@ -62,7 +62,7 @@ export default function TabBar({ tabs, ariaLabel }: { tabs: TabBarItem[]; ariaLa
             className={active ? 'admin-tab admin-tab-active' : 'admin-tab'}
             aria-current={active ? 'page' : undefined}
           >
-            <i className={tab.icon} aria-hidden="true" />
+            <Icon size={16} aria-hidden="true" />
             <span>{tab.label}</span>
           </Link>
         );
