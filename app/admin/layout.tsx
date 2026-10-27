@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
+import AdminTabs from './AdminTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="app-header-menu">
         <h1>Painel do Administrador</h1>
       </header>
-      <nav className="admin-tabs">
-        <Link href="/admin">Dashboard</Link>
-        <Link href="/admin/restaurants">Restaurantes</Link>
-        <Link href="/admin/orders">Pedidos</Link>
-        <Link href="/admin/users">Usuários</Link>
-        <Link href="/admin/audit">Auditoria</Link>
-      </nav>
+      <AdminTabs />
       <main className="app-main-menu">{children}</main>
     </div>
   );

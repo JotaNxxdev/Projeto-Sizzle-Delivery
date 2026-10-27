@@ -836,28 +836,84 @@ h2 {
 
 /* Painéis de administrador / dono de restaurante */
 .admin-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 5;
     display: flex;
-    gap: 20px;
-    padding: 0 20px;
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    gap: 2px;
+    padding: 0 16px;
+    background: #15171a;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
 
-.admin-tabs a {
-    display: block;
-    padding: 12px 0;
-    color: #666;
+.admin-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.admin-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 14px;
+    color: #8a8f98;
     text-decoration: none;
-    font-weight: 600;
-    border-bottom: 3px solid transparent;
-    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.74rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     white-space: nowrap;
+    flex-shrink: 0;
+    transition: color 0.18s ease;
 }
 
-.admin-tabs a:hover {
-    color: #43B55C;
+.admin-tab i {
+    font-size: 0.85rem;
+    color: #565c66;
+    transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.admin-tab:hover {
+    color: #e4e6eb;
+}
+
+.admin-tab:hover i {
+    color: #4FCB6A;
+}
+
+.admin-tab-active,
+.admin-tab-active:hover {
+    color: #fff;
+}
+
+.admin-tab-active i,
+.admin-tab-active:hover i {
+    color: #4FCB6A;
+    transform: scale(1.08);
+}
+
+.admin-tab-indicator {
+    position: absolute;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(90deg, #4FCB6A, #2E8F45);
+    box-shadow: 0 0 12px rgba(79, 203, 106, 0.75), 0 0 2px rgba(79, 203, 106, 0.9);
+    transition: left 0.28s cubic-bezier(0.65, 0, 0.35, 1), width 0.28s cubic-bezier(0.65, 0, 0.35, 1);
+    pointer-events: none;
+}
+
+@media (min-width: 700px) {
+    .admin-tabs {
+        padding: 0 20px;
+    }
+
+    .admin-tab {
+        padding: 18px 18px;
+        font-size: 0.78rem;
+    }
 }
 
 .admin-table {
