@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getCurrentProfile } from '@/lib/auth';
 import NewOrderNotifier from './NewOrderNotifier';
+import RestaurantTabs from './RestaurantTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,17 +32,7 @@ export default async function RestaurantOwnerLayout({ children }: { children: Re
       <header className="app-header-menu">
         <h1>Painel do Restaurante</h1>
       </header>
-      <nav className="admin-tabs">
-        <Link href="/restaurant">Pedidos</Link>
-        <Link href="/restaurant/reports">Relatórios</Link>
-        <Link href="/restaurant/menu">Cardápio</Link>
-        <Link href="/restaurant/couriers">Entregadores</Link>
-        <Link href="/restaurant/coupons">Cupons</Link>
-        <Link href="/restaurant/customers">Clientes</Link>
-        <Link href="/restaurant/whatsapp">WhatsApp</Link>
-        <Link href="/restaurant/reviews">Avaliações</Link>
-        <Link href="/restaurant/settings">Loja</Link>
-      </nav>
+      <RestaurantTabs />
       <NewOrderNotifier restaurantId={profile.restaurantId} />
       <main className="app-main-menu">{children}</main>
     </div>
