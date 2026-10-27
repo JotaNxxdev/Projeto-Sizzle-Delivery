@@ -3,25 +3,27 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getRestaurantById } from '@/lib/restaurants';
 import { getCurrentProfile } from '@/lib/auth';
 import { createPixPayment } from '@/lib/mercadopago';
-import { validateCoupon } from '@/lib/coupons';
 import { isValidBrazilianPhone } from '@/lib/phone';
-import { isWithinBusinessHours } from '@/lib/business-hours';
 import { sendPushToUser } from '@/lib/push';
 import { formatCurrency } from '@/lib/format';
-import { resolveOrderItem } from '@/lib/order-pricing';
-import type { ResolvedOrderItem } from '@/lib/order-pricing';
-import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
+import { calculateOrderPricing, type IncomingOrderItem } from '@/lib/order-validation';
+import type { DeliveryMethod, OrderOrigin, PaymentMethod } from '@/lib/types';
 
-interface IncomingItem {
-  menuItemId: string;
-  quantity: number;
-  selectedValueIds?: string[];
+type IncomingItem = IncomingOrderItem;
+
+// Header usado só pelo bot de WhatsApp (serviço separado, sem sessão de
+// cookie) pra se autenticar como um cliente de confiança do backend. Sem
+// esse header batendo com a variável de ambiente, a origem do pedido é
+// SEMPRE 'web' — nunca confiamos em um campo "origin" vindo do corpo da
+// requisição normal do site.
+const BOT_TOKEN_HEADER = 'x-sizzle-bot-token';
+
+function isTrustedBotRequest(request: NextRequest): boolean {
+  const expected = process.env.WHATSAPP_BOT_API_TOKEN;
+  if (!expected) return false;
+  const provided = request.headers.get(BOT_TOKEN_HEADER);
+  return Boolean(provided) && provided === expected;
 }
-
-// Janela permitida pra agendar um pedido: pelo menos 30min de antecedência
-// (tempo mínimo de preparo) e no máximo 7 dias à frente.
-const MIN_SCHEDULE_LEAD_MINUTES = 30;
-const MAX_SCHEDULE_DAYS_AHEAD = 7;
 
 interface CreateOrderBody {
   restaurantId?: string;
@@ -58,11 +60,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fazer pedido exige conta — é o que liga o pedido para sempre a quem o fez,
-  // em vez de um ID solto no navegador que some se o cache for limpo.
-  const profile = await getCurrentProfile();
-  if (!profile) {
-    return NextResponse.json({ error: 'Você precisa estar logado para finalizar um pedido.' }, { status: 401 });
+  // O pedido do site sempre exige conta — é o que liga o pedido para sempre
+  // a quem o fez. O bot de WhatsApp é um serviço de confiança do próprio
+  // backend (sem cookie de sessão), autenticado pelo token verificado acima;
+  // pra ele o pedido fica com user_id nulo (igual já era previsto pra
+  // "pedido de visitante" no banco) e o cliente é identificado pelo telefone.
+  const isBotRequest = isTrustedBotRequest(request);
+
+  let profile: { id: string; email: string } | null = null;
+  if (!isBotRequest) {
+    profile = await getCurrentProfile();
+    if (!profile) {
+      return NextResponse.json({ error: 'Você precisa estar logado para finalizar um pedido.' }, { status: 401 });
+    }
   }
 
   const body = (await request.json().catch(() => null)) as CreateOrderBody | null;
@@ -72,11 +82,18 @@ export async function POST(request: NextRequest) {
 
   const { restaurantId, items, notes, contact, receiverName } = body;
   const deliveryMethod: DeliveryMethod = body.deliveryMethod === 'pickup' ? 'pickup' : 'delivery';
-  const paymentMethod: PaymentMethod = (['pix', 'cash', 'card'] as PaymentMethod[]).includes(
-    body.paymentMethod as PaymentMethod
-  )
+
+  // 'pix' aqui é SEMPRE a cobrança online via Mercado Pago (exige profile.email
+  // mais abaixo) — por isso nunca é aceito de uma requisição do bot. O bot só
+  // pode usar 'pix_manual' (chave Pix combinada por fora), que o site nunca
+  // envia. 'origin' nunca vem do corpo da requisição: só do token já
+  // verificado no servidor, então uma requisição do site jamais grava
+  // origin='whatsapp', mesmo que tente.
+  const allowedPaymentMethods: PaymentMethod[] = isBotRequest ? ['cash', 'card', 'pix_manual'] : ['pix', 'cash', 'card'];
+  const paymentMethod: PaymentMethod = allowedPaymentMethods.includes(body.paymentMethod as PaymentMethod)
     ? (body.paymentMethod as PaymentMethod)
     : 'cash';
+  const origin: OrderOrigin = isBotRequest ? 'whatsapp' : 'web';
 
   if (!restaurantId || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: 'Dados do pedido incompletos.' }, { status: 400 });
@@ -99,84 +116,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Restaurante não encontrado.' }, { status: 404 });
   }
 
-  // Pedido agendado: valida a janela e o horário de funcionamento do
-  // restaurante NO MOMENTO AGENDADO, em vez de exigir que esteja aberto
-  // agora (afinal o pedido só vai ser preparado mais tarde).
-  let scheduledFor: Date | null = null;
-  if (body.scheduledFor) {
-    const parsed = new Date(body.scheduledFor);
-    const now = new Date();
-    const minAllowed = new Date(now.getTime() + MIN_SCHEDULE_LEAD_MINUTES * 60 * 1000);
-    const maxAllowed = new Date(now.getTime() + MAX_SCHEDULE_DAYS_AHEAD * 24 * 60 * 60 * 1000);
-
-    if (Number.isNaN(parsed.getTime()) || parsed < minAllowed || parsed > maxAllowed) {
-      return NextResponse.json(
-        {
-          error: `Horário de agendamento inválido. Escolha entre ${MIN_SCHEDULE_LEAD_MINUTES} minutos e ${MAX_SCHEDULE_DAYS_AHEAD} dias a partir de agora.`,
-        },
-        { status: 400 }
-      );
-    }
-    if (!isWithinBusinessHours(restaurant.businessHours, parsed)) {
-      return NextResponse.json(
-        { error: 'O restaurante está fechado nesse horário. Escolha outro horário dentro do funcionamento da loja.' },
-        { status: 400 }
-      );
-    }
-    scheduledFor = parsed;
-  } else if (!restaurant.isOpenNow) {
-    return NextResponse.json({ error: 'Este restaurante está fechado no momento.' }, { status: 400 });
-  }
-
-  // Só aceita "pix" se o restaurante realmente estiver com pagamento online
-  // ativado e conectado — nunca confiamos apenas no que o cliente mandou.
+  // Só aceita "pix" (cobrança online) se o restaurante realmente estiver com
+  // pagamento online ativado e conectado — nunca confiamos apenas no que o
+  // cliente mandou. (Pedido do bot nunca chega aqui com 'pix': ver acima.)
   if (paymentMethod === 'pix' && !restaurant.onlinePaymentEnabled) {
     return NextResponse.json({ error: 'Este restaurante não aceita pagamento online no momento.' }, { status: 400 });
   }
 
-  // Nunca confiamos em preços vindos do cliente: recalculamos tudo a partir
-  // do cardápio carregado no servidor (inclusive os adicionais escolhidos),
-  // para o pedido não poder ser adulterado.
-  let subtotal = 0;
-  const resolvedItems: ResolvedOrderItem[] = [];
-
-  for (const incoming of items) {
-    const menuItem = restaurant.menu.find((item) => item.id === incoming.menuItemId);
-    const selectedValueIds = Array.isArray(incoming.selectedValueIds) ? incoming.selectedValueIds : [];
-    const result = resolveOrderItem(menuItem, incoming.quantity, selectedValueIds);
-
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-
-    subtotal += result.item.price * result.item.quantity;
-    resolvedItems.push(result.item);
-  }
-
-  if (restaurant.minOrderValue > 0 && subtotal < restaurant.minOrderValue) {
-    return NextResponse.json(
-      { error: `Pedido mínimo desse restaurante: ${restaurant.minOrderValue.toFixed(2)} (sem contar a entrega).` },
-      { status: 400 }
-    );
-  }
-
-  // Revalida o cupom de novo aqui (nunca confia no desconto calculado pelo
-  // navegador, mesmo que a pré-visualização já tenha validado antes).
-  let discountAmount = 0;
-  let appliedCouponId: string | null = null;
-  const couponCode = body.couponCode?.trim();
   const isSeedRestaurant = restaurant.id.startsWith('seed-');
-  if (couponCode && !isSeedRestaurant) {
-    const couponResult = await validateCoupon(restaurant.id, couponCode, subtotal, profile.id);
-    if (!couponResult.valid) {
-      return NextResponse.json({ error: couponResult.error || 'Cupom inválido.' }, { status: 400 });
-    }
-    discountAmount = couponResult.discount ?? 0;
-    appliedCouponId = couponResult.couponId ?? null;
-  }
+  const couponCode = body.couponCode?.trim();
 
-  const deliveryFee = deliveryMethod === 'pickup' ? 0 : restaurant.deliveryFee;
-  const total = subtotal - discountAmount + deliveryFee;
+  // Mesmo cálculo/validação usado pelo endpoint de pré-visualização
+  // (app/api/orders/preview/route.ts) — nunca confiamos em preço, desconto
+  // ou total vindos do cliente (site ou bot).
+  const pricing = await calculateOrderPricing({
+    restaurant,
+    items,
+    deliveryMethod,
+    couponCode,
+    userId: profile?.id ?? null,
+    scheduledForRaw: body.scheduledFor,
+  });
+  if (!pricing.ok) {
+    return NextResponse.json({ error: pricing.error }, { status: pricing.status });
+  }
+  const { resolvedItems, subtotal, deliveryFee, discountAmount, total, appliedCouponId, scheduledFor } = pricing;
+
   const orderCode = `PED-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
   const changeFor =
     paymentMethod === 'cash' && typeof body.changeFor === 'number' && body.changeFor > total ? body.changeFor : null;
@@ -206,8 +171,9 @@ export async function POST(request: NextRequest) {
       coupon_code: appliedCouponId ? couponCode!.toUpperCase() : null,
       discount_amount: discountAmount,
       total,
-      user_id: profile.id,
+      user_id: profile?.id ?? null,
       scheduled_for: scheduledFor ? scheduledFor.toISOString() : null,
+      origin,
     })
     .select()
     .single();
@@ -221,7 +187,7 @@ export async function POST(request: NextRequest) {
     const { error: redemptionError } = await supabase.from('coupon_redemptions').insert({
       coupon_id: appliedCouponId,
       order_id: orderRow.id,
-      user_id: profile.id,
+      user_id: profile?.id ?? null,
       discount_applied: discountAmount,
     });
     if (redemptionError) {
@@ -303,10 +269,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Chegar até aqui exige paymentMethod === 'pix', e isso nunca é permitido
+    // pra requisição do bot (allowedPaymentMethods acima) — então profile
+    // sempre existe neste ponto.
     const payment = await createPixPayment({
       amount: total,
       description: `Pedido ${orderCode} - ${restaurant.name}`,
-      payerEmail: profile.email,
+      payerEmail: profile!.email,
       externalReference: orderCode,
       notificationUrl: `${request.nextUrl.origin}/api/webhooks/mercadopago`,
       accessToken: restaurantAuth.mp_access_token,
@@ -351,7 +320,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, coupon_code, discount_amount, total, created_at, scheduled_for, order_items(id, menu_item_name, price, quantity)'
+      'id, order_code, restaurant_name, notes, contact_number, delivery_address, receiver_name, street, street_number, complement, neighborhood, city, reference_point, delivery_method, payment_method, change_for, status, rejection_reason, payment_status, subtotal, delivery_fee, coupon_code, discount_amount, total, created_at, scheduled_for, origin, order_items(id, menu_item_name, price, quantity)'
     )
     .eq('user_id', profile.id)
     .order('created_at', { ascending: false });
@@ -419,6 +388,7 @@ export async function GET() {
     total: Number(order.total),
     date: new Date(order.created_at).toLocaleString('pt-BR'),
     scheduledFor: order.scheduled_for ? new Date(order.scheduled_for).toLocaleString('pt-BR') : null,
+    origin: order.origin,
     items: (order.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),

@@ -1,0 +1,13 @@
+{
+  "name": "whatsapp-test-local",
+  "private": true,
+  "description": "Teste isolado da biblioteca não-oficial Baileys. Roda só no seu computador, nunca na Vercel/produção.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "baileys": "7.0.0-rc14",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

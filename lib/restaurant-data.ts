@@ -30,11 +30,12 @@ export interface OwnerOrderRow {
   scheduledFor: string | null;
   courierId: string | null;
   courierName: string | null;
+  origin: string;
   items: { name: string; price: number; quantity: number; options: OwnerOrderItemOption[] }[];
 }
 
 const ORDER_ROW_SELECT =
-  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, scheduled_for, courier_id, order_items(id, menu_item_name, price, quantity)';
+  'id, order_code, contact_number, delivery_address, reference_point, receiver_name, delivery_method, payment_method, change_for, notes, status, rejection_reason, payment_status, subtotal, delivery_fee, total, created_at, scheduled_for, courier_id, origin, order_items(id, menu_item_name, price, quantity)';
 
 // Busca os adicionais escolhidos de vários itens de pedido de uma vez
 // (mesmo padrão de busca em lote já usado nesse arquivo).
@@ -79,6 +80,7 @@ function mapOrderRow(
     created_at: string;
     scheduled_for: string | null;
     courier_id: string | null;
+    origin: string;
     order_items: { id: string; menu_item_name: string; price: number | string; quantity: number }[] | null;
   },
   optionsByItemId: Map<string, OwnerOrderItemOption[]>
@@ -105,6 +107,7 @@ function mapOrderRow(
     scheduledFor: o.scheduled_for ? new Date(o.scheduled_for).toLocaleString('pt-BR') : null,
     courierId: o.courier_id,
     courierName: null, // preenchido depois por attachCourierNames
+    origin: o.origin,
     items: (o.order_items ?? []).map((item) => ({
       name: item.menu_item_name,
       price: Number(item.price),
@@ -189,6 +192,9 @@ export interface RestaurantSettings {
   businessHours: BusinessHours | null;
   isOpenNow: boolean; // computado: isOpen && dentro do horário configurado
   minOrderValue: number;
+  // Chave Pix mostrada no fluxo manual do bot de WhatsApp — não tem relação
+  // com a conta do Mercado Pago (essa é só pro Pix online do site).
+  manualPixKey: string | null;
 }
 
 export async function getRestaurantSettings(restaurantId: string): Promise<RestaurantSettings | null> {
@@ -197,7 +203,7 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
   const { data, error } = await supabase
     .from('restaurants')
     .select(
-      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value'
+      'id, name, category, delivery_time, delivery_fee, image_url, brand_color, description, online_payment_enabled, mp_access_token, is_open, business_hours, min_order_value, manual_pix_key'
     )
     .eq('id', restaurantId)
     .single();
@@ -225,6 +231,7 @@ export async function getRestaurantSettings(restaurantId: string): Promise<Resta
     businessHours,
     isOpenNow: isOpen && isWithinBusinessHours(businessHours),
     minOrderValue: Number(data.min_order_value),
+    manualPixKey: data.manual_pix_key,
   };
 }
 
@@ -551,4 +558,40 @@ export async function getCustomersForRestaurant(restaurantId: string): Promise<C
       };
     })
     .sort((a, b) => b.totalSpent - a.totalSpent);
+}
+
+export interface PausedWhatsappSession {
+  id: string;
+  phone: string;
+  step: string;
+  pausedAt: string | null;
+  lastInteractionAt: string;
+}
+
+// Lista as conversas do bot de WhatsApp que estão com atendimento humano
+// pausado (cliente digitou "atendente") pra esse restaurante — sempre
+// filtrado por restaurantId, igual todo o resto deste arquivo, mesmo o bot
+// usando a mesma service_role key que ignora RLS.
+export async function getPausedWhatsappSessions(restaurantId: string): Promise<PausedWhatsappSession[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('whatsapp_customer_sessions')
+    .select('id, phone, step, paused_at, last_interaction_at')
+    .eq('restaurant_id', restaurantId)
+    .eq('paused_for_agent', true)
+    .order('paused_at', { ascending: true });
+
+  if (error) {
+    console.error('[Sizzle] Erro ao buscar conversas pausadas do WhatsApp:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    phone: row.phone,
+    step: row.step,
+    pausedAt: row.paused_at ? new Date(row.paused_at).toLocaleString('pt-BR') : null,
+    lastInteractionAt: new Date(row.last_interaction_at).toLocaleString('pt-BR'),
+  }));
 }

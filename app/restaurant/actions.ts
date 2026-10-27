@@ -133,6 +133,7 @@ export async function updateRestaurantSettings(formData: FormData) {
   const minOrderValue = Number(formData.get('minOrderValue') || 0);
   const brandColor = String(formData.get('brandColor') || '').trim() || null;
   const description = String(formData.get('description') || '').trim() || null;
+  const manualPixKey = String(formData.get('manualPixKey') || '').trim() || null;
 
   if (!name || !category || !deliveryTime || !(deliveryFee >= 0) || !(minOrderValue >= 0)) {
     fail('/restaurant/settings', 'Nome, categoria, tempo de entrega e taxa são obrigatórios.');
@@ -146,6 +147,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     min_order_value: number;
     brand_color: string | null;
     description: string | null;
+    manual_pix_key: string | null;
     image_url?: string;
   } = {
     name,
@@ -155,6 +157,7 @@ export async function updateRestaurantSettings(formData: FormData) {
     min_order_value: minOrderValue,
     brand_color: brandColor,
     description,
+    manual_pix_key: manualPixKey,
   };
 
   // Só troca a foto se veio uma nova (o formulário só manda este campo
@@ -613,4 +616,24 @@ export async function replyToReview(formData: FormData) {
   if (error) fail('/restaurant/reviews', 'Não foi possível salvar a resposta.');
 
   revalidatePath('/restaurant/reviews');
+}
+
+// Reativa o bot de WhatsApp pra um cliente específico depois que ele pediu
+// "atendente" — o dono confirma aqui que já respondeu por fora e o bot
+// pode voltar a conversar normalmente com esse número.
+export async function reactivateWhatsappSession(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const { db } = await requireOwnerOf(restaurantId);
+
+  const sessionId = String(formData.get('sessionId') || '');
+  if (!sessionId) fail('/restaurant/whatsapp', 'Conversa inválida.');
+
+  const { error } = await db
+    .from('whatsapp_customer_sessions')
+    .update({ paused_for_agent: false, paused_at: null })
+    .eq('id', sessionId)
+    .eq('restaurant_id', restaurantId);
+  if (error) fail('/restaurant/whatsapp', 'Não foi possível reativar essa conversa.');
+
+  revalidatePath('/restaurant/whatsapp');
 }

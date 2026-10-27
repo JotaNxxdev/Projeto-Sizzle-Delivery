@@ -108,6 +108,19 @@ export default function RestaurantSettingsForm({ settings }: { settings: Restaur
         <label htmlFor="brandColor">Cor da loja</label>
         <input id="brandColor" name="brandColor" type="color" defaultValue={settings.brandColor ?? '#000000'} style={{ height: 45, padding: 4 }} />
       </div>
+      <div className="form-group">
+        <label htmlFor="manualPixKey">Chave Pix (usada no pedido por WhatsApp)</label>
+        <input
+          id="manualPixKey"
+          name="manualPixKey"
+          placeholder="CPF, e-mail, telefone ou chave aleatória"
+          defaultValue={settings.manualPixKey ?? ''}
+        />
+        <small>
+          Mostrada pro cliente quando ele escolhe pagar por Pix no bot do WhatsApp. O pagamento é combinado direto
+          com você — não passa pelo Mercado Pago.
+        </small>
+      </div>
 
       <button type="submit" className="checkout-button" disabled={uploading}>
         {uploading ? 'Enviando imagem...' : 'Salvar loja'}
