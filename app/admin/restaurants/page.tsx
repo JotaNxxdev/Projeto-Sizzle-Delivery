@@ -1,6 +1,13 @@
+import { Store } from 'lucide-react';
 import { listRestaurantsWithOwner } from '@/lib/admin-data';
 import { createRestaurant, assignOwner, removeOwner, archiveRestaurant, unarchiveRestaurant, deleteRestaurant } from '../actions';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import { Table, Td } from '@/components/ui/Table';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,14 +21,13 @@ export default async function AdminRestaurantsPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <h2>Restaurantes ({restaurants.length})</h2>
       {restaurants.length === 0 ? (
-        <p className="empty-state">Nenhum restaurante cadastrado ainda.</p>
+        <EmptyState icon={Store} title="Nenhum restaurante cadastrado ainda" description="Cadastre o primeiro no formulário abaixo." />
       ) : (
-        <div className="admin-table-wrapper">
-        <table className="admin-table">
+        <Table>
           <thead>
             <tr>
               <th>Nome</th>
@@ -34,19 +40,21 @@ export default async function AdminRestaurantsPage({
           <tbody>
             {restaurants.map((restaurant) => (
               <tr key={restaurant.id}>
-                <td>{restaurant.name}</td>
-                <td>{restaurant.category}</td>
-                <td>{restaurant.isArchived ? 'Arquivado' : 'Ativo'}</td>
-                <td>{restaurant.ownerEmail ?? '— sem dono —'}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Td label="Nome">{restaurant.name}</Td>
+                <Td label="Categoria">{restaurant.category}</Td>
+                <Td label="Status">
+                  <Badge tone={restaurant.isArchived ? 'neutral' : 'success'}>{restaurant.isArchived ? 'Arquivado' : 'Ativo'}</Badge>
+                </Td>
+                <Td label="Dono">{restaurant.ownerEmail ?? '— sem dono —'}</Td>
+                <Td label="Ação">
+                  <div className="table-action-group">
                     {restaurant.ownerId ? (
                       <form action={removeOwner}>
                         <input type="hidden" name="restaurantId" value={restaurant.id} />
                         <input type="hidden" name="ownerId" value={restaurant.ownerId} />
                         <ConfirmSubmitButton
                           confirmMessage={`Remover ${restaurant.ownerEmail ?? 'o dono atual'} como dono de "${restaurant.name}"?`}
-                          className="quantity-btn admin-btn"
+                          className="ui-button ui-button-secondary ui-button-sm"
                         >
                           Remover dono
                         </ConfirmSubmitButton>
@@ -55,25 +63,25 @@ export default async function AdminRestaurantsPage({
                       <form action={assignOwner} className="admin-inline-form">
                         <input type="hidden" name="restaurantId" value={restaurant.id} />
                         <input type="email" name="ownerEmail" placeholder="email@dono.com" required />
-                        <button type="submit" className="add-to-cart-button">
+                        <Button type="submit" variant="primary" size="sm">
                           Atribuir dono
-                        </button>
+                        </Button>
                       </form>
                     )}
 
                     {restaurant.isArchived ? (
                       <form action={unarchiveRestaurant}>
                         <input type="hidden" name="restaurantId" value={restaurant.id} />
-                        <button type="submit" className="quantity-btn admin-btn">
+                        <Button type="submit" variant="secondary" size="sm">
                           Reativar
-                        </button>
+                        </Button>
                       </form>
                     ) : (
                       <form action={archiveRestaurant}>
                         <input type="hidden" name="restaurantId" value={restaurant.id} />
                         <ConfirmSubmitButton
                           confirmMessage={`Arquivar "${restaurant.name}"? Ele some da home e do checkout dos clientes, mas o histórico continua salvo. Dá pra reativar depois.`}
-                          className="quantity-btn admin-btn"
+                          className="ui-button ui-button-secondary ui-button-sm"
                         >
                           Arquivar
                         </ConfirmSubmitButton>
@@ -85,46 +93,30 @@ export default async function AdminRestaurantsPage({
                         <input type="hidden" name="restaurantId" value={restaurant.id} />
                         <ConfirmSubmitButton
                           confirmMessage={`Excluir "${restaurant.name}" definitivamente? Esse restaurante não tem pedidos, então dá pra excluir de verdade — mas não tem como desfazer.`}
-                          className="quantity-btn admin-btn"
+                          className="ui-button ui-button-danger ui-button-sm"
                         >
                           Excluir
                         </ConfirmSubmitButton>
                       </form>
                     )}
                   </div>
-                </td>
+                </Td>
               </tr>
             ))}
           </tbody>
-        </table>
-        </div>
+        </Table>
       )}
 
-      <h2 style={{ marginTop: 30 }}>Novo restaurante</h2>
+      <h2 style={{ marginTop: 'var(--space-8)' }}>Novo restaurante</h2>
       <form action={createRestaurant} className="checkout-form">
-        <div className="form-group">
-          <label htmlFor="name">Nome</label>
-          <input id="name" name="name" required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="category">Categoria</label>
-          <input id="category" name="category" placeholder="pizza, lanches, japonesa..." required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="deliveryTime">Tempo de entrega</label>
-          <input id="deliveryTime" name="deliveryTime" placeholder="30-40 min" />
-        </div>
-        <div className="form-group">
-          <label htmlFor="deliveryFee">Taxa de entrega (R$)</label>
-          <input id="deliveryFee" name="deliveryFee" type="number" step="0.01" min="0" defaultValue="0" />
-        </div>
-        <div className="form-group">
-          <label htmlFor="imageUrl">URL da imagem (ex: /unnamed.png)</label>
-          <input id="imageUrl" name="imageUrl" placeholder="/unnamed.png" />
-        </div>
-        <button type="submit" className="checkout-button">
+        <Input label="Nome" id="name" name="name" required />
+        <Input label="Categoria" id="category" name="category" placeholder="pizza, lanches, japonesa..." required />
+        <Input label="Tempo de entrega" id="deliveryTime" name="deliveryTime" placeholder="30-40 min" />
+        <Input label="Taxa de entrega (R$)" id="deliveryFee" name="deliveryFee" type="number" step="0.01" min="0" defaultValue="0" />
+        <Input label="URL da imagem (ex: /unnamed.png)" id="imageUrl" name="imageUrl" placeholder="/unnamed.png" />
+        <Button type="submit" variant="primary" fullWidth>
           Criar restaurante
-        </button>
+        </Button>
       </form>
     </div>
   );

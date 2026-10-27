@@ -1,6 +1,8 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import type { RestaurantReport } from '@/lib/restaurant-data';
+import Button from '@/components/ui/Button';
 
 function toCsv(rows: (string | number)[][]): string {
   return rows
@@ -40,8 +42,8 @@ export default function ExportCsvButton({ report }: { report: RestaurantReport }
   }
 
   return (
-    <button type="button" className="quantity-btn admin-btn" onClick={handleExport}>
-      <i className="fas fa-download" aria-hidden="true" /> Baixar CSV
-    </button>
+    <Button type="button" variant="secondary" size="sm" icon={<Download size={14} aria-hidden="true" />} onClick={handleExport}>
+      Baixar CSV
+    </Button>
   );
 }

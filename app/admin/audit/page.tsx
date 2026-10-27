@@ -1,4 +1,7 @@
+import { History } from 'lucide-react';
 import { listAuditLogs } from '@/lib/admin-data';
+import { Table, Td } from '@/components/ui/Table';
+import EmptyState from '@/components/ui/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,42 +20,44 @@ export default async function AdminAuditPage() {
   return (
     <div>
       <h2>Auditoria ({logs.length})</h2>
-      <p style={{ color: '#666', fontSize: '0.85rem', marginTop: 0 }}>
+      <p className="hint-text">
         Últimas {logs.length} mudanças sensíveis registradas (status de pedido, preço de item, papéis de usuário).
       </p>
 
       {logs.length === 0 ? (
-        <p className="empty-state">Nenhum registro de auditoria ainda.</p>
+        <EmptyState icon={History} title="Nenhum registro de auditoria ainda" />
       ) : (
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Quem</th>
-                <th>Ação</th>
-                <th>Entidade</th>
-                <th>Antes</th>
-                <th>Depois</th>
+        <Table>
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Quem</th>
+              <th>Ação</th>
+              <th>Entidade</th>
+              <th>Antes</th>
+              <th>Depois</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr key={log.id}>
+                <Td label="Quando">{log.createdAt}</Td>
+                <Td label="Quem">{log.userEmail ?? '—'}</Td>
+                <Td label="Ação">{log.action}</Td>
+                <Td label="Entidade">
+                  {log.entity}
+                  {log.entityId && <> #{log.entityId.slice(0, 8)}</>}
+                </Td>
+                <Td label="Antes" style={{ fontSize: 'var(--text-xs)' }}>
+                  {formatValue(log.oldValue)}
+                </Td>
+                <Td label="Depois" style={{ fontSize: 'var(--text-xs)' }}>
+                  {formatValue(log.newValue)}
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
-                  <td>{log.createdAt}</td>
-                  <td>{log.userEmail ?? '—'}</td>
-                  <td>{log.action}</td>
-                  <td>
-                    {log.entity}
-                    {log.entityId && <> #{log.entityId.slice(0, 8)}</>}
-                  </td>
-                  <td style={{ fontSize: '0.8rem' }}>{formatValue(log.oldValue)}</td>
-                  <td style={{ fontSize: '0.8rem' }}>{formatValue(log.newValue)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

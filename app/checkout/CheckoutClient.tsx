@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Tag } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import Select from '@/components/ui/Select';
+import Radio from '@/components/ui/Radio';
+import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/format';
 import { isValidBrazilianPhone } from '@/lib/phone';
 import type { DeliveryMethod, PaymentMethod } from '@/lib/types';
@@ -279,23 +285,18 @@ export default function CheckoutClient({
         </header>
         <main className="app-main-menu">
           <div className="checkout-form" style={{ textAlign: 'center' }}>
-            <h2 style={{ color: '#43B55C' }}>Pedido #{completedOrder.orderCode} enviado!</h2>
-            <p style={{ color: '#666' }}>
+            <h2 style={{ color: 'var(--color-success)' }}>Pedido #{completedOrder.orderCode} enviado!</h2>
+            <p style={{ color: 'var(--color-text-muted)' }}>
               O restaurante já recebeu seu pedido e vai começar a preparar.
               <br />
               Total: {formatCurrency(completedOrder.total)}
             </p>
-            <button className="checkout-button" onClick={() => router.push('/orders')}>
+            <Button variant="primary" fullWidth onClick={() => router.push('/orders')}>
               Ver meus pedidos
-            </button>
-            <button
-              type="button"
-              className="add-to-cart-button"
-              style={{ marginTop: 10 }}
-              onClick={() => router.push('/')}
-            >
+            </Button>
+            <Button variant="secondary" fullWidth style={{ marginTop: 'var(--space-3)' }} onClick={() => router.push('/')}>
               Voltar para o início
-            </button>
+            </Button>
           </div>
         </main>
       </div>
@@ -310,66 +311,51 @@ export default function CheckoutClient({
       </header>
       <main className="app-main-menu">
         <div className="checkout-form">
-          <div className="form-group">
-            <label htmlFor="receiver-name">Nome de quem vai receber:</label>
-            <input
-              id="receiver-name"
-              type="text"
-              placeholder="Seu nome"
-              value={receiverName}
-              onChange={(event) => setReceiverName(event.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="contact-number">Número para contato:</label>
-            <input
-              id="contact-number"
-              type="tel"
-              placeholder="(00) 00000-0000"
-              value={contact}
-              onChange={(event) => setContact(event.target.value)}
-            />
-          </div>
+          <Input
+            label="Nome de quem vai receber"
+            id="receiver-name"
+            type="text"
+            placeholder="Seu nome"
+            value={receiverName}
+            onChange={(event) => setReceiverName(event.target.value)}
+          />
+          <Input
+            label="Número para contato"
+            id="contact-number"
+            type="tel"
+            placeholder="(00) 00000-0000"
+            value={contact}
+            onChange={(event) => setContact(event.target.value)}
+          />
 
-          <div className="form-group">
-            <label>Forma de entrega:</label>
-            <div className="radio-group" style={{ marginBottom: 0 }}>
-              <label>
-                <input
-                  type="radio"
-                  name="deliveryMethod"
-                  checked={deliveryMethod === 'delivery'}
-                  onChange={() => setDeliveryMethod('delivery')}
-                />
-                Entrega
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="deliveryMethod"
-                  checked={deliveryMethod === 'pickup'}
-                  onChange={() => setDeliveryMethod('pickup')}
-                />
-                Retirada no local
-              </label>
+          <div className="ui-field">
+            <span className="ui-field-label">Forma de entrega</span>
+            <div className="radio-row">
+              <Radio
+                name="deliveryMethod"
+                checked={deliveryMethod === 'delivery'}
+                onChange={() => setDeliveryMethod('delivery')}
+                label="Entrega"
+              />
+              <Radio
+                name="deliveryMethod"
+                checked={deliveryMethod === 'pickup'}
+                onChange={() => setDeliveryMethod('pickup')}
+                label="Retirada no local"
+              />
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Quando entregar/retirar:</label>
-            <div className="radio-group" style={{ marginBottom: isScheduled ? 10 : 0 }}>
-              <label>
-                <input type="radio" name="whenOrder" checked={!isScheduled} onChange={() => setIsScheduled(false)} />
-                Agora
-              </label>
-              <label>
-                <input type="radio" name="whenOrder" checked={isScheduled} onChange={() => setIsScheduled(true)} />
-                Agendar
-              </label>
+          <div className="ui-field">
+            <span className="ui-field-label">Quando entregar/retirar</span>
+            <div className="radio-row" style={{ marginBottom: isScheduled ? 'var(--space-2)' : 0 }}>
+              <Radio name="whenOrder" checked={!isScheduled} onChange={() => setIsScheduled(false)} label="Agora" />
+              <Radio name="whenOrder" checked={isScheduled} onChange={() => setIsScheduled(true)} label="Agendar" />
             </div>
             {isScheduled && (
               <input
                 type="datetime-local"
+                className="ui-input"
                 value={scheduledFor}
                 onChange={(event) => setScheduledFor(event.target.value)}
                 min={toDatetimeLocal(new Date(Date.now() + 30 * 60 * 1000))}
@@ -381,140 +367,114 @@ export default function CheckoutClient({
           {deliveryMethod === 'delivery' && (
             <>
               {savedAddresses.length > 0 && (
-                <div className="form-group">
-                  <label htmlFor="saved-address">Endereço salvo:</label>
-                  <select
-                    id="saved-address"
-                    value={selectedAddressId}
-                    onChange={(event) => handleSelectAddress(event.target.value)}
-                  >
-                    {savedAddresses.map((address) => (
-                      <option key={address.id} value={address.id}>
-                        {address.label} — {address.street}, {address.streetNumber}
-                      </option>
-                    ))}
-                    <option value={NEW_ADDRESS_OPTION}>Digitar outro endereço</option>
-                  </select>
-                </div>
+                <Select
+                  label="Endereço salvo"
+                  id="saved-address"
+                  value={selectedAddressId}
+                  onChange={(event) => handleSelectAddress(event.target.value)}
+                >
+                  {savedAddresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label} — {address.street}, {address.streetNumber}
+                    </option>
+                  ))}
+                  <option value={NEW_ADDRESS_OPTION}>Digitar outro endereço</option>
+                </Select>
               )}
-              <div className="form-group">
-                <label htmlFor="street">Rua:</label>
-                <input id="street" type="text" value={street} onChange={(event) => setStreet(event.target.value)} />
-              </div>
+              <Input label="Rua" id="street" type="text" value={street} onChange={(event) => setStreet(event.target.value)} />
               <div className="form-row">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="street-number">Número:</label>
-                  <input
-                    id="street-number"
-                    type="text"
-                    value={streetNumber}
-                    onChange={(event) => setStreetNumber(event.target.value)}
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label htmlFor="complement">Complemento:</label>
-                  <input
-                    id="complement"
-                    type="text"
-                    placeholder="Apto, bloco... (opcional)"
-                    value={complement}
-                    onChange={(event) => setComplement(event.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label htmlFor="neighborhood">Bairro:</label>
-                <input
-                  id="neighborhood"
+                <Input
+                  label="Número"
+                  id="street-number"
                   type="text"
-                  value={neighborhood}
-                  onChange={(event) => setNeighborhood(event.target.value)}
+                  value={streetNumber}
+                  onChange={(event) => setStreetNumber(event.target.value)}
+                />
+                <Input
+                  label="Complemento"
+                  id="complement"
+                  type="text"
+                  placeholder="Apto, bloco... (opcional)"
+                  value={complement}
+                  onChange={(event) => setComplement(event.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label htmlFor="city">Cidade:</label>
-                <input id="city" type="text" value={city} onChange={(event) => setCity(event.target.value)} />
-              </div>
-              <div className="form-group">
-                <label htmlFor="reference-point">Ponto de referência:</label>
-                <input
-                  id="reference-point"
-                  type="text"
-                  placeholder="Opcional"
-                  value={referencePoint}
-                  onChange={(event) => setReferencePoint(event.target.value)}
-                />
-              </div>
+              <Input
+                label="Bairro"
+                id="neighborhood"
+                type="text"
+                value={neighborhood}
+                onChange={(event) => setNeighborhood(event.target.value)}
+              />
+              <Input label="Cidade" id="city" type="text" value={city} onChange={(event) => setCity(event.target.value)} />
+              <Input
+                label="Ponto de referência"
+                id="reference-point"
+                type="text"
+                placeholder="Opcional"
+                value={referencePoint}
+                onChange={(event) => setReferencePoint(event.target.value)}
+              />
             </>
           )}
 
-          <div className="form-group">
-            <label htmlFor="order-notes">Observações do pedido:</label>
-            <textarea
-              id="order-notes"
-              rows={4}
-              placeholder="Ex: Sem cebola, ponto da carne, etc."
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
+          <Textarea
+            label="Observações do pedido"
+            id="order-notes"
+            rows={4}
+            placeholder="Ex: Sem cebola, ponto da carne, etc."
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
 
-          <div className="form-group">
-            <label htmlFor="payment-method">Forma de pagamento:</label>
-            <select
-              id="payment-method"
-              value={paymentMethod}
-              onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-            >
-              {onlinePaymentEnabled && <option value="pix">Pix (pague agora pelo app)</option>}
-              <option value="cash">Dinheiro na entrega</option>
-              <option value="card">Cartão na entrega</option>
-            </select>
-          </div>
+          <Select
+            label="Forma de pagamento"
+            id="payment-method"
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+          >
+            {onlinePaymentEnabled && <option value="pix">Pix (pague agora pelo app)</option>}
+            <option value="cash">Dinheiro na entrega</option>
+            <option value="card">Cartão na entrega</option>
+          </Select>
 
           {paymentMethod === 'cash' && (
-            <div className="form-group">
-              <label htmlFor="change-for">Precisa de troco para quanto? (opcional)</label>
-              <input
-                id="change-for"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="Ex: 100"
-                value={changeFor}
-                onChange={(event) => setChangeFor(event.target.value)}
-              />
-            </div>
+            <Input
+              label="Precisa de troco para quanto? (opcional)"
+              id="change-for"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Ex: 100"
+              value={changeFor}
+              onChange={(event) => setChangeFor(event.target.value)}
+            />
           )}
 
-          <div className="form-group">
-            <label htmlFor="coupon-code">Cupom de desconto:</label>
+          <div className="ui-field">
+            <span className="ui-field-label">Cupom de desconto</span>
             {appliedCoupon ? (
-              <div className="admin-inline-form">
-                <span style={{ color: '#43B55C', fontWeight: 600 }}>
-                  {appliedCoupon.code} aplicado (-{formatCurrency(appliedCoupon.discount)})
+              <div className="coupon-row">
+                <span className="coupon-applied">
+                  <Tag size={14} aria-hidden="true" /> {appliedCoupon.code} aplicado (-{formatCurrency(appliedCoupon.discount)})
                 </span>
-                <button type="button" className="quantity-btn admin-btn" onClick={handleRemoveCoupon}>
+                <Button type="button" variant="secondary" size="sm" onClick={handleRemoveCoupon}>
                   Remover
-                </button>
+                </Button>
               </div>
             ) : (
-              <div className="admin-inline-form">
+              <div className="coupon-row">
                 <input
                   id="coupon-code"
                   type="text"
+                  className="ui-input"
                   placeholder="Ex: BEMVINDO10"
                   value={couponInput}
                   onChange={(event) => setCouponInput(event.target.value)}
                 />
-                <button
-                  type="button"
-                  className="quantity-btn admin-btn"
-                  onClick={handleApplyCoupon}
-                  disabled={applyingCoupon || !couponInput.trim()}
-                >
-                  {applyingCoupon ? 'Aplicando...' : 'Aplicar'}
-                </button>
+                <Button type="button" variant="secondary" size="sm" onClick={handleApplyCoupon} loading={applyingCoupon} disabled={!couponInput.trim()}>
+                  Aplicar
+                </Button>
               </div>
             )}
           </div>
@@ -525,13 +485,13 @@ export default function CheckoutClient({
               <span>-{formatCurrency(discount)}</span>
             </div>
           )}
-          <div className="summary-line total" style={{ marginBottom: 20 }}>
+          <div className="summary-line total" style={{ marginBottom: 'var(--space-5)' }}>
             <span>Total do pedido</span>
             <span>{formatCurrency(total)}</span>
           </div>
-          <button className="checkout-button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Enviando...' : 'Confirmar Pedido'}
-          </button>
+          <Button variant="primary" fullWidth size="lg" onClick={handleSubmit} loading={submitting}>
+            Confirmar Pedido
+          </Button>
         </div>
       </main>
     </div>

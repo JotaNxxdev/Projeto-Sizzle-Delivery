@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ClipboardList } from 'lucide-react';
 import BackButton from '@/components/BackButton';
 import StarRating from '@/components/StarRating';
+import Button from '@/components/ui/Button';
+import Textarea from '@/components/ui/Textarea';
+import Skeleton from '@/components/ui/Skeleton';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 import { formatCurrency } from '@/lib/format';
 import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, getPaymentStatusLabel, type Order } from '@/lib/types';
 import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
@@ -36,6 +43,7 @@ async function fetchOrders(): Promise<Order[]> {
 
 export default function OrdersPage() {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -60,7 +68,13 @@ export default function OrdersPage() {
   }, []);
 
   async function handleCancel(orderCode: string) {
-    if (!window.confirm(`Cancelar o pedido #${orderCode}? Essa ação não pode ser desfeita.`)) return;
+    const ok = await confirm({
+      message: `Cancelar o pedido #${orderCode}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Cancelar pedido',
+      cancelLabel: 'Voltar',
+      danger: true,
+    });
+    if (!ok) return;
 
     setCancellingId(orderCode);
     try {
@@ -119,10 +133,15 @@ export default function OrdersPage() {
       </header>
       <main className="app-main-menu">
         <div id="orders-list">
-          {error && <p className="empty-state">{error}</p>}
-          {!error && orders === null && <p className="empty-state">Carregando pedidos...</p>}
+          {error && <ErrorState description={error} />}
+          {!error && orders === null && (
+            <div className="order-item-skeletons">
+              <Skeleton height={110} radius="lg" />
+              <Skeleton height={110} radius="lg" />
+            </div>
+          )}
           {!error && orders && orders.length === 0 && (
-            <p className="empty-state">Você ainda não fez nenhum pedido.</p>
+            <EmptyState icon={ClipboardList} title="Você ainda não fez nenhum pedido" description="Seus pedidos aparecem aqui assim que você finalizar uma compra." />
           )}
           {orders?.map((order) => (
             <div className="order-item" key={order.id}>
@@ -178,7 +197,7 @@ export default function OrdersPage() {
                     <li key={index}>
                       {item.quantity}x {item.name} ({formatCurrency(item.price)})
                       {item.options.length > 0 && (
-                        <span style={{ color: '#666' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
+                        <span style={{ color: 'var(--color-text-muted)' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
                       )}
                     </li>
                   ))}
@@ -193,34 +212,35 @@ export default function OrdersPage() {
                 </p>
               </div>
               {order.status === 'Pendente' && (
-                <button
+                <Button
                   type="button"
-                  className="quantity-btn admin-btn"
-                  style={{ marginTop: 10 }}
+                  variant="danger"
+                  size="sm"
+                  style={{ marginTop: 'var(--space-3)' }}
                   onClick={() => handleCancel(order.id)}
-                  disabled={cancellingId === order.id}
+                  loading={cancellingId === order.id}
                 >
-                  {cancellingId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
-                </button>
+                  Cancelar pedido
+                </Button>
               )}
               {order.status === 'Entregue' && (
-                <div style={{ marginTop: 15, paddingTop: 15, borderTop: '1px solid #eee' }}>
+                <div className="order-review-block">
                   {order.review ? (
                     <>
-                      <p style={{ marginBottom: 5 }}>
+                      <p style={{ marginBottom: 'var(--space-1)' }}>
                         <strong>Sua avaliação:</strong>
                       </p>
                       <StarRating value={order.review.rating} readOnly size={18} />
-                      {order.review.comment && <p style={{ marginTop: 5 }}>{order.review.comment}</p>}
+                      {order.review.comment && <p style={{ marginTop: 'var(--space-1)' }}>{order.review.comment}</p>}
                       {order.review.restaurantReply && (
-                        <p style={{ marginTop: 5, color: '#666' }}>
+                        <p style={{ marginTop: 'var(--space-1)', color: 'var(--color-text-muted)' }}>
                           <strong>Resposta do restaurante:</strong> {order.review.restaurantReply}
                         </p>
                       )}
                     </>
                   ) : (
                     <>
-                      <p style={{ marginBottom: 5 }}>
+                      <p style={{ marginBottom: 'var(--space-1)' }}>
                         <strong>Avalie esse pedido:</strong>
                       </p>
                       <StarRating
@@ -232,7 +252,7 @@ export default function OrdersPage() {
                           }))
                         }
                       />
-                      <textarea
+                      <Textarea
                         placeholder="Comentário (opcional)"
                         value={reviewDrafts[order.id]?.comment ?? ''}
                         onChange={(e) =>
@@ -241,17 +261,17 @@ export default function OrdersPage() {
                             [order.id]: { rating: prev[order.id]?.rating ?? 0, comment: e.target.value },
                           }))
                         }
-                        style={{ display: 'block', width: '100%', marginTop: 8, minHeight: 60 }}
+                        style={{ marginTop: 'var(--space-2)', minHeight: 60 }}
                       />
-                      <button
+                      <Button
                         type="button"
-                        className="quantity-btn admin-btn"
-                        style={{ marginTop: 8 }}
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleSubmitReview(order.id)}
-                        disabled={submittingReviewId === order.id}
+                        loading={submittingReviewId === order.id}
                       >
-                        {submittingReviewId === order.id ? 'Enviando...' : 'Enviar avaliação'}
-                      </button>
+                        Enviar avaliação
+                      </Button>
                     </>
                   )}
                 </div>

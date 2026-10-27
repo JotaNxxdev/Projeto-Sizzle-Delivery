@@ -1,4 +1,10 @@
+'use client';
+
+import { useRef } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { disconnectMercadoPago, toggleOnlinePayment } from '../actions';
+import Button from '@/components/ui/Button';
+import Switch from '@/components/ui/Switch';
 
 export default function MercadoPagoConnection({
   restaurantId,
@@ -9,41 +15,43 @@ export default function MercadoPagoConnection({
   connected: boolean;
   onlinePaymentEnabled: boolean;
 }) {
+  const toggleFormRef = useRef<HTMLFormElement>(null);
+
   return (
-    <div className="checkout-form" style={{ marginBottom: 20 }}>
+    <div className="checkout-form" style={{ marginBottom: 'var(--space-5)' }}>
       <h3 style={{ marginTop: 0 }}>Pagamento online (Pix)</h3>
 
       {!connected ? (
         <>
-          <p style={{ color: '#666' }}>
+          <p className="hint-text">
             Conecte a sua própria conta do Mercado Pago para receber os pagamentos Pix dos seus clientes direto na
             sua conta — a Sizzle Delivery não fica com o dinheiro em nenhum momento.
           </p>
-          <a href="/api/mercadopago/connect" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          <a href="/api/mercadopago/connect" className="ui-button ui-button-primary ui-button-md ui-button-block">
             Conectar com Mercado Pago
           </a>
         </>
       ) : (
         <>
-          <p style={{ color: '#43B55C', fontWeight: 600 }}>✓ Conta do Mercado Pago conectada</p>
+          <p className="mp-connected-notice">
+            <CheckCircle2 size={16} aria-hidden="true" /> Conta do Mercado Pago conectada
+          </p>
 
-          <form action={toggleOnlinePayment} className="admin-inline-form" style={{ marginBottom: 15 }}>
+          <form ref={toggleFormRef} action={toggleOnlinePayment} style={{ marginBottom: 'var(--space-4)' }}>
             <input type="hidden" name="restaurantId" value={restaurantId} />
             <input type="hidden" name="enabled" value={(!onlinePaymentEnabled).toString()} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="checkbox" checked={onlinePaymentEnabled} readOnly />
-              Aceitar pagamento online (Pix) neste restaurante
-            </label>
-            <button type="submit" className="quantity-btn admin-btn">
-              {onlinePaymentEnabled ? 'Desativar' : 'Ativar'}
-            </button>
+            <Switch
+              label="Aceitar pagamento online (Pix) neste restaurante"
+              checked={onlinePaymentEnabled}
+              onChange={() => toggleFormRef.current?.requestSubmit()}
+            />
           </form>
 
           <form action={disconnectMercadoPago}>
             <input type="hidden" name="restaurantId" value={restaurantId} />
-            <button type="submit" className="quantity-btn admin-btn">
+            <Button type="submit" variant="secondary" size="sm">
               Desconectar conta do Mercado Pago
-            </button>
+            </Button>
           </form>
         </>
       )}

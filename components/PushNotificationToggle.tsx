@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
+import Switch from '@/components/ui/Switch';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -93,15 +94,12 @@ export default function PushNotificationToggle() {
   if (!supported) return null;
 
   return (
-    <button
-      type="button"
-      className="quantity-btn admin-btn"
-      style={{ marginTop: 10 }}
-      onClick={subscribed ? handleUnsubscribe : handleSubscribe}
+    <Switch
+      className="push-toggle"
+      label={loading ? 'Aguarde...' : 'Notificações push'}
+      checked={subscribed}
       disabled={loading}
-    >
-      <i className={`fas ${subscribed ? 'fa-bell-slash' : 'fa-bell'}`} aria-hidden="true" />{' '}
-      {loading ? 'Aguarde...' : subscribed ? 'Desativar notificações' : 'Ativar notificações'}
-    </button>
+      onChange={() => (subscribed ? handleUnsubscribe() : handleSubscribe())}
+    />
   );
 }

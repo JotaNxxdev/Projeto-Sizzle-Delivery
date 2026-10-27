@@ -3,8 +3,11 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Camera } from 'lucide-react';
 import SignOutButton from '@/components/SignOutButton';
 import PushNotificationToggle from '@/components/PushNotificationToggle';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 import { updateMyProfile } from './actions';
 import type { CurrentProfile } from '@/lib/auth';
 import { useToast } from '@/contexts/ToastContext';
@@ -89,25 +92,25 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
           <p style={{ margin: 0 }}>
             Logado como <strong>{profile.email}</strong>
           </p>
-          <p style={{ margin: '4px 0 12px', color: '#666' }}>{ROLE_LABEL[profile.role]}</p>
-          <SignOutButton className="checkout-button" />
+          <p style={{ margin: 'var(--space-1) 0 var(--space-3)', color: 'var(--color-text-muted)' }}>{ROLE_LABEL[profile.role]}</p>
+          <SignOutButton />
           <PushNotificationToggle />
         </div>
 
         {(profile.role === 'admin' || profile.role === 'restaurant_owner' || profile.role === 'courier') && (
           <div className="user-input-group" style={{ width: '100%', maxWidth: 400 }}>
             {profile.role === 'admin' && (
-              <Link href="/admin" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0, marginBottom: 10 }}>
+              <Link href="/admin" className="checkout-button profile-panel-link">
                 Ir para o Painel do Administrador
               </Link>
             )}
             {profile.role === 'restaurant_owner' && (
-              <Link href="/restaurant" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}>
+              <Link href="/restaurant" className="checkout-button profile-panel-link">
                 Ir para o Painel do Restaurante
               </Link>
             )}
             {profile.role === 'courier' && (
-              <Link href="/courier" className="checkout-button" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}>
+              <Link href="/courier" className="checkout-button profile-panel-link">
                 Ir para o Painel do Entregador
               </Link>
             )}
@@ -123,7 +126,7 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
               onClick={() => fileInputRef.current?.click()}
               aria-label="Alterar foto de perfil"
             >
-              <i className="fas fa-camera" aria-hidden="true" />
+              <Camera size={15} aria-hidden="true" />
             </button>
             <input
               ref={fileInputRef}
@@ -134,29 +137,20 @@ export default function ProfileClient({ profile }: { profile: CurrentProfile }) 
             />
           </div>
 
-          <div className="user-input-group">
-            <label htmlFor="profile-name">Nome de Usuário</label>
-            <input
-              id="profile-name"
-              type="text"
-              placeholder="Seu nome"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <div className="user-input-group">
-            <label htmlFor="profile-phone">Número de Telefone</label>
-            <input
+          <div style={{ width: '100%', maxWidth: 400 }}>
+            <Input label="Nome de usuário" id="profile-name" type="text" placeholder="Seu nome" value={name} onChange={(event) => setName(event.target.value)} />
+            <Input
+              label="Número de telefone"
               id="profile-phone"
               type="tel"
               placeholder="(00) 00000-0000"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
             />
+            <Button variant="primary" fullWidth onClick={handleSave} loading={saving || uploadingAvatar}>
+              {uploadingAvatar ? 'Enviando foto...' : saved ? 'Salvo!' : 'Salvar alterações'}
+            </Button>
           </div>
-          <button type="button" className="checkout-button" onClick={handleSave} disabled={saving || uploadingAvatar}>
-            {uploadingAvatar ? 'Enviando foto...' : saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar alterações'}
-          </button>
         </div>
 
         <ul className="profile-menu">

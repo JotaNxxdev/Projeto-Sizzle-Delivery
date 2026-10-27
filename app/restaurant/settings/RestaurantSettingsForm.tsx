@@ -1,21 +1,21 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { updateRestaurantSettings } from '../actions';
 import { useToast } from '@/contexts/ToastContext';
 import type { RestaurantSettings } from '@/lib/restaurant-data';
+import Input from '@/components/ui/Input';
+import Textarea from '@/components/ui/Textarea';
+import Button from '@/components/ui/Button';
+import FileUpload from '@/components/ui/FileUpload';
 
 export default function RestaurantSettingsForm({ settings }: { settings: RestaurantSettings }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
   const [imagePreview, setImagePreview] = useState(settings.imageUrl ?? '');
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  async function handleFileSelect(file: File) {
     // Preview instantâneo local — o upload de verdade acontece em paralelo,
     // sem nunca guardar o arquivo inteiro em base64 no formulário.
     setImagePreview(URL.createObjectURL(file));
@@ -42,89 +42,49 @@ export default function RestaurantSettingsForm({ settings }: { settings: Restaur
       <input type="hidden" name="restaurantId" value={settings.id} />
       {newImageUrl && <input type="hidden" name="imageUrl" value={newImageUrl} />}
 
-      <div className="profile-picture-container" style={{ marginBottom: 20 }}>
-        {imagePreview ? (
-          <img src={imagePreview} alt="Foto da loja" className="profile-picture" style={{ borderRadius: 15 }} />
-        ) : (
-          <div className="profile-picture" style={{ borderRadius: 15, backgroundColor: '#eee' }} />
-        )}
-        <button
-          type="button"
-          className="upload-button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label="Alterar foto da loja"
-        >
-          <i className="fas fa-camera" aria-hidden="true" />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </div>
+      <FileUpload label="Foto da loja" previewUrl={imagePreview || null} loading={uploading} onFileSelect={handleFileSelect} />
 
-      <div className="form-group">
-        <label htmlFor="name">Nome da loja</label>
-        <input id="name" name="name" defaultValue={settings.name} required />
+      <Input label="Nome da loja" id="name" name="name" defaultValue={settings.name} required />
+      <Input label="Categoria" id="category" name="category" defaultValue={settings.category} required />
+      <Textarea label="Descrição / observações" id="description" name="description" rows={3} defaultValue={settings.description ?? ''} />
+      <Input label="Tempo de entrega" id="deliveryTime" name="deliveryTime" placeholder="Ex: 30-40 min" defaultValue={settings.deliveryTime} required />
+      <Input
+        label="Taxa de entrega (R$)"
+        id="deliveryFee"
+        name="deliveryFee"
+        type="number"
+        step="0.01"
+        min="0"
+        defaultValue={settings.deliveryFee}
+        required
+      />
+      <Input
+        label="Pedido mínimo (R$) — deixe 0 pra não exigir mínimo"
+        id="minOrderValue"
+        name="minOrderValue"
+        type="number"
+        step="0.01"
+        min="0"
+        defaultValue={settings.minOrderValue}
+      />
+      <div className="ui-field">
+        <label className="ui-field-label" htmlFor="brandColor">
+          Cor da loja
+        </label>
+        <input id="brandColor" name="brandColor" type="color" defaultValue={settings.brandColor ?? '#000000'} className="color-input" />
       </div>
-      <div className="form-group">
-        <label htmlFor="category">Categoria</label>
-        <input id="category" name="category" defaultValue={settings.category} required />
-      </div>
-      <div className="form-group">
-        <label htmlFor="description">Descrição / observações</label>
-        <textarea id="description" name="description" rows={3} defaultValue={settings.description ?? ''} />
-      </div>
-      <div className="form-group">
-        <label htmlFor="deliveryTime">Tempo de entrega</label>
-        <input id="deliveryTime" name="deliveryTime" placeholder="Ex: 30-40 min" defaultValue={settings.deliveryTime} required />
-      </div>
-      <div className="form-group">
-        <label htmlFor="deliveryFee">Taxa de entrega (R$)</label>
-        <input
-          id="deliveryFee"
-          name="deliveryFee"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={settings.deliveryFee}
-          required
-        />
-      </div>
-      <div className="form-group">
-        <label htmlFor="minOrderValue">Pedido mínimo (R$) — deixe 0 pra não exigir mínimo</label>
-        <input
-          id="minOrderValue"
-          name="minOrderValue"
-          type="number"
-          step="0.01"
-          min="0"
-          defaultValue={settings.minOrderValue}
-        />
-      </div>
-      <div className="form-group">
-        <label htmlFor="brandColor">Cor da loja</label>
-        <input id="brandColor" name="brandColor" type="color" defaultValue={settings.brandColor ?? '#000000'} style={{ height: 45, padding: 4 }} />
-      </div>
-      <div className="form-group">
-        <label htmlFor="manualPixKey">Chave Pix (usada no pedido por WhatsApp)</label>
-        <input
-          id="manualPixKey"
-          name="manualPixKey"
-          placeholder="CPF, e-mail, telefone ou chave aleatória"
-          defaultValue={settings.manualPixKey ?? ''}
-        />
-        <small>
-          Mostrada pro cliente quando ele escolhe pagar por Pix no bot do WhatsApp. O pagamento é combinado direto
-          com você — não passa pelo Mercado Pago.
-        </small>
-      </div>
+      <Input
+        label="Chave Pix (usada no pedido por WhatsApp)"
+        id="manualPixKey"
+        name="manualPixKey"
+        placeholder="CPF, e-mail, telefone ou chave aleatória"
+        defaultValue={settings.manualPixKey ?? ''}
+        hint="Mostrada pro cliente quando ele escolhe pagar por Pix no bot do WhatsApp. O pagamento é combinado direto com você — não passa pelo Mercado Pago."
+      />
 
-      <button type="submit" className="checkout-button" disabled={uploading}>
+      <Button type="submit" variant="primary" fullWidth loading={uploading}>
         {uploading ? 'Enviando imagem...' : 'Salvar loja'}
-      </button>
+      </Button>
     </form>
   );
 }

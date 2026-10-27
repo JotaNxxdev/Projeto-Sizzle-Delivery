@@ -1,8 +1,11 @@
+import { BarChart3 } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getRestaurantReport } from '@/lib/restaurant-data';
 import { formatCurrency } from '@/lib/format';
 import { PAYMENT_METHOD_LABEL, type PaymentMethod } from '@/lib/types';
 import ExportCsvButton from './ExportCsvButton';
+import { Table, Td } from '@/components/ui/Table';
+import EmptyState from '@/components/ui/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,16 +17,7 @@ export default async function RestaurantReportsPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 15,
-        }}
-      >
+      <div className="section-header">
         <h2 style={{ marginBottom: 0 }}>Relatórios</h2>
         <ExportCsvButton report={report} />
       </div>
@@ -51,7 +45,7 @@ export default async function RestaurantReportsPage() {
         </div>
       </div>
 
-      <div className="report-grid" style={{ marginBottom: 25 }}>
+      <div className="report-grid" style={{ marginBottom: 'var(--space-6)' }}>
         <div className="report-card">
           <h4>Ticket médio</h4>
           <p>{formatCurrency(report.averageTicket)}</p>
@@ -72,10 +66,10 @@ export default async function RestaurantReportsPage() {
 
       <h3>Por forma de pagamento</h3>
       {report.paymentMethodBreakdown.length === 0 ? (
-        <p className="empty-state">Ainda não há dados suficientes.</p>
+        <EmptyState icon={BarChart3} title="Ainda não há dados suficientes" />
       ) : (
-        <div className="admin-table-wrapper" style={{ marginBottom: 25 }}>
-          <table className="admin-table">
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <Table>
             <thead>
               <tr>
                 <th>Forma de pagamento</th>
@@ -86,40 +80,38 @@ export default async function RestaurantReportsPage() {
             <tbody>
               {report.paymentMethodBreakdown.map((row) => (
                 <tr key={row.method}>
-                  <td>{PAYMENT_METHOD_LABEL[row.method as PaymentMethod] ?? row.method}</td>
-                  <td>{row.orders}</td>
-                  <td>{formatCurrency(row.revenue)}</td>
+                  <Td label="Forma de pagamento">{PAYMENT_METHOD_LABEL[row.method as PaymentMethod] ?? row.method}</Td>
+                  <Td label="Pedidos">{row.orders}</Td>
+                  <Td label="Faturamento">{formatCurrency(row.revenue)}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
 
       <h3>Mais vendidos</h3>
       {report.topItems.length === 0 ? (
-        <p className="empty-state">Ainda não há dados suficientes.</p>
+        <EmptyState icon={BarChart3} title="Ainda não há dados suficientes" />
       ) : (
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qtd. vendida</th>
-                <th>Receita</th>
+        <Table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qtd. vendida</th>
+              <th>Receita</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.topItems.map((item) => (
+              <tr key={item.name}>
+                <Td label="Item">{item.name}</Td>
+                <Td label="Qtd. vendida">{item.quantity}</Td>
+                <Td label="Receita">{formatCurrency(item.revenue)}</Td>
               </tr>
-            </thead>
-            <tbody>
-              {report.topItems.map((item) => (
-                <tr key={item.name}>
-                  <td>{item.name}</td>
-                  <td>{item.quantity}</td>
-                  <td>{formatCurrency(item.revenue)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

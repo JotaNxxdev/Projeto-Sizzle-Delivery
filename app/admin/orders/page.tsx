@@ -1,7 +1,13 @@
+import { ClipboardList } from 'lucide-react';
 import { listAllOrders } from '@/lib/admin-data';
 import { updateOrderStatusAsAdmin } from '../actions';
 import { ORDER_STATUSES, getPaymentStatusLabel, type PaymentMethod, type PaymentStatus } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+import InlineSelect from '@/components/ui/InlineSelect';
+import Button from '@/components/ui/Button';
+import { Table, Td } from '@/components/ui/Table';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,14 +21,13 @@ export default async function AdminOrdersPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <h2>Todos os pedidos ({orders.length})</h2>
       {orders.length === 0 ? (
-        <p className="empty-state">Nenhum pedido ainda.</p>
+        <EmptyState icon={ClipboardList} title="Nenhum pedido ainda" />
       ) : (
-        <div className="admin-table-wrapper">
-        <table className="admin-table">
+        <Table>
           <thead>
             <tr>
               <th>Pedido</th>
@@ -36,33 +41,30 @@ export default async function AdminOrdersPage({
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td>{order.orderCode}</td>
-                <td>{order.restaurantName}</td>
-                <td>{formatCurrency(order.total)}</td>
-                <td>{order.createdAt}</td>
-                <td>
-                  {getPaymentStatusLabel(order.paymentMethod as PaymentMethod, order.paymentStatus as PaymentStatus)}
-                </td>
-                <td>
+                <Td label="Pedido">{order.orderCode}</Td>
+                <Td label="Restaurante">{order.restaurantName}</Td>
+                <Td label="Total">{formatCurrency(order.total)}</Td>
+                <Td label="Data">{order.createdAt}</Td>
+                <Td label="Pagamento">{getPaymentStatusLabel(order.paymentMethod as PaymentMethod, order.paymentStatus as PaymentStatus)}</Td>
+                <Td label="Status">
                   <form action={updateOrderStatusAsAdmin} className="admin-inline-form">
                     <input type="hidden" name="orderId" value={order.id} />
-                    <select name="status" defaultValue={order.status}>
+                    <InlineSelect name="status" defaultValue={order.status}>
                       {ORDER_STATUSES.map((status) => (
                         <option key={status} value={status}>
                           {status}
                         </option>
                       ))}
-                    </select>
-                    <button type="submit" className="quantity-btn admin-btn">
+                    </InlineSelect>
+                    <Button type="submit" variant="secondary" size="sm">
                       Salvar
-                    </button>
+                    </Button>
                   </form>
-                </td>
+                </Td>
               </tr>
             ))}
           </tbody>
-        </table>
-        </div>
+        </Table>
       )}
     </div>
   );

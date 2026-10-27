@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { ListTree } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getMenuItemsForRestaurant } from '@/lib/restaurant-data';
 import { getOptionGroupsForMenuItems } from '@/lib/menu-options';
@@ -6,6 +7,10 @@ import { createOptionGroup, deleteOptionGroup, createOptionValue, deleteOptionVa
 import { formatCurrency } from '@/lib/format';
 import BackButton from '@/components/BackButton';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,20 +36,20 @@ export default async function MenuItemOptionsPage({
 
   return (
     <div>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 15 }}>
+      <header className="page-header-row">
         <BackButton />
         <h2 style={{ marginBottom: 0 }}>Adicionais de &quot;{item.name}&quot;</h2>
       </header>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       {groups.length === 0 ? (
-        <p className="empty-state">Nenhum grupo de opções criado ainda.</p>
+        <EmptyState icon={ListTree} title="Nenhum grupo de opções criado ainda" description="Crie o primeiro grupo no formulário abaixo." />
       ) : (
         groups.map((group) => (
-          <div key={group.id} className="order-item" style={{ marginBottom: 15 }}>
+          <div key={group.id} className="order-item">
             <div className="order-header">
               <h4>{group.name}</h4>
-              <span style={{ color: '#666', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                 {group.minSelections === 0 ? 'Opcional' : `Mín. ${group.minSelections}`} · Máx. {group.maxSelections}
               </span>
             </div>
@@ -52,12 +57,9 @@ export default async function MenuItemOptionsPage({
               {group.values.length === 0 ? (
                 <p className="empty-state">Nenhuma opção cadastrada nesse grupo.</p>
               ) : (
-                <ul>
+                <ul className="option-value-list">
                   {group.values.map((value) => (
-                    <li
-                      key={value.id}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
-                    >
+                    <li key={value.id}>
                       <span>
                         {value.name}
                         {value.priceDelta > 0 && ` (+${formatCurrency(value.priceDelta)})`}
@@ -66,10 +68,7 @@ export default async function MenuItemOptionsPage({
                         <input type="hidden" name="restaurantId" value={restaurantId} />
                         <input type="hidden" name="itemId" value={itemId} />
                         <input type="hidden" name="valueId" value={value.id} />
-                        <ConfirmSubmitButton
-                          confirmMessage={`Excluir a opção "${value.name}"?`}
-                          className="quantity-btn admin-btn"
-                        >
+                        <ConfirmSubmitButton confirmMessage={`Excluir a opção "${value.name}"?`} className="ui-button ui-button-secondary ui-button-sm">
                           Excluir
                         </ConfirmSubmitButton>
                       </form>
@@ -78,25 +77,22 @@ export default async function MenuItemOptionsPage({
                 </ul>
               )}
 
-              <form action={createOptionValue} className="admin-inline-form" style={{ marginTop: 10 }}>
+              <form action={createOptionValue} className="admin-inline-form" style={{ marginTop: 'var(--space-3)' }}>
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="itemId" value={itemId} />
                 <input type="hidden" name="groupId" value={group.id} />
                 <input type="text" name="name" placeholder="Nome da opção" required />
                 <input type="number" name="priceDelta" placeholder="Preço extra (R$)" step="0.01" min="0" defaultValue="0" />
-                <button type="submit" className="quantity-btn admin-btn">
+                <Button type="submit" variant="secondary" size="sm">
                   Adicionar opção
-                </button>
+                </Button>
               </form>
 
-              <form action={deleteOptionGroup} style={{ marginTop: 10 }}>
+              <form action={deleteOptionGroup} style={{ marginTop: 'var(--space-3)' }}>
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="itemId" value={itemId} />
                 <input type="hidden" name="groupId" value={group.id} />
-                <ConfirmSubmitButton
-                  confirmMessage={`Excluir o grupo "${group.name}" e todas as suas opções?`}
-                  className="quantity-btn admin-btn"
-                >
+                <ConfirmSubmitButton confirmMessage={`Excluir o grupo "${group.name}" e todas as suas opções?`} className="ui-button ui-button-secondary ui-button-sm">
                   Excluir grupo
                 </ConfirmSubmitButton>
               </form>
@@ -105,27 +101,18 @@ export default async function MenuItemOptionsPage({
         ))
       )}
 
-      <h2 style={{ marginTop: 30 }}>Novo grupo de opções</h2>
+      <h2 style={{ marginTop: 'var(--space-8)' }}>Novo grupo de opções</h2>
       <form action={createOptionGroup} className="checkout-form">
         <input type="hidden" name="restaurantId" value={restaurantId} />
         <input type="hidden" name="itemId" value={itemId} />
-        <div className="form-group">
-          <label htmlFor="name">Nome do grupo</label>
-          <input id="name" name="name" placeholder="Ex: Tamanho, Adicionais, Ponto da carne" required />
-        </div>
+        <Input label="Nome do grupo" id="name" name="name" placeholder="Ex: Tamanho, Adicionais, Ponto da carne" required />
         <div className="form-row">
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="minSelections">Mínimo de seleções</label>
-            <input id="minSelections" name="minSelections" type="number" min="0" defaultValue="0" />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="maxSelections">Máximo de seleções</label>
-            <input id="maxSelections" name="maxSelections" type="number" min="1" defaultValue="1" />
-          </div>
+          <Input label="Mínimo de seleções" id="minSelections" name="minSelections" type="number" min="0" defaultValue="0" />
+          <Input label="Máximo de seleções" id="maxSelections" name="maxSelections" type="number" min="1" defaultValue="1" />
         </div>
-        <button type="submit" className="checkout-button" style={{ marginTop: 20 }}>
+        <Button type="submit" variant="primary" fullWidth>
           Criar grupo
-        </button>
+        </Button>
       </form>
     </div>
   );

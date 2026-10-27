@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createAuthBrowserClient } from '@/lib/supabase-auth-browser';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -67,42 +69,50 @@ export default function ResetPasswordPage() {
 
   if (checking) {
     return (
-      <div className="screen">
-        <header className="app-header-menu">
-          <h1>Redefinir senha</h1>
-        </header>
-        <main className="app-main-menu">
-          <p className="empty-state">Verificando link...</p>
-        </main>
+      <div className="auth-screen">
+        <div className="auth-banner">
+          <img src="/LOGOR.png" alt="Sizzle" />
+        </div>
+        <div className="auth-body">
+          <div className="auth-card">
+            <h1 className="auth-title">Redefinir senha</h1>
+            <p className="auth-message">Verificando link...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!ready) {
     return (
-      <div className="screen">
-        <header className="app-header-menu">
-          <h1>Redefinir senha</h1>
-        </header>
-        <main className="app-main-menu">
-          <p className="empty-state">
-            Esse link é inválido ou expirou. <Link href="/forgot-password">Solicite um novo</Link>.
-          </p>
-        </main>
+      <div className="auth-screen">
+        <div className="auth-banner">
+          <img src="/LOGOR.png" alt="Sizzle" />
+        </div>
+        <div className="auth-body">
+          <div className="auth-card">
+            <h1 className="auth-title">Link inválido</h1>
+            <p className="auth-message">
+              Esse link é inválido ou expirou. <Link href="/forgot-password">Solicite um novo</Link>.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="screen">
-      <header className="app-header-menu">
-        <h1>Redefinir senha</h1>
-      </header>
-      <main className="app-main-menu">
-        <form className="checkout-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="password">Nova senha</label>
-            <input
+    <div className="auth-screen">
+      <div className="auth-banner">
+        <img src="/LOGOR.png" alt="Sizzle" />
+      </div>
+      <div className="auth-body">
+        <div className="auth-card">
+          <h1 className="auth-title">Redefinir senha</h1>
+          <p className="auth-subtitle">Escolha uma nova senha para sua conta</p>
+          <form onSubmit={handleSubmit}>
+            <Input
+              label="Nova senha"
               id="password"
               type="password"
               required
@@ -110,10 +120,8 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
-          </div>
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar nova senha</label>
-            <input
+            <Input
+              label="Confirmar nova senha"
               id="confirmPassword"
               type="password"
               required
@@ -121,13 +129,13 @@ export default function ResetPasswordPage() {
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
             />
-          </div>
-          {error && <p className="empty-state">{error}</p>}
-          <button className="checkout-button" type="submit" disabled={submitting}>
-            {submitting ? 'Salvando...' : 'Salvar nova senha'}
-          </button>
-        </form>
-      </main>
+            {error && <p className="ui-field-error" style={{ marginBottom: 'var(--space-4)' }}>{error}</p>}
+            <Button type="submit" variant="primary" fullWidth loading={submitting}>
+              Salvar nova senha
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
