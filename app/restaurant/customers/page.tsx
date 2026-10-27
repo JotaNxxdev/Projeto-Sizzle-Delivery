@@ -1,6 +1,9 @@
+import { Users } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getCustomersForRestaurant } from '@/lib/restaurant-data';
 import { formatCurrency } from '@/lib/format';
+import { Table, Td } from '@/components/ui/Table';
+import EmptyState from '@/components/ui/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,35 +17,33 @@ export default async function RestaurantCustomersPage() {
     <div>
       <h2>Clientes ({customers.length})</h2>
       {customers.length === 0 ? (
-        <p className="empty-state">Nenhum cliente fez pedido ainda.</p>
+        <EmptyState icon={Users} title="Nenhum cliente fez pedido ainda" />
       ) : (
-        <div className="admin-table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Contato</th>
-                <th>Pedidos</th>
-                <th>Total gasto</th>
-                <th>Último pedido</th>
+        <Table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Contato</th>
+              <th>Pedidos</th>
+              <th>Total gasto</th>
+              <th>Último pedido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customers.map((customer) => (
+              <tr key={customer.userId}>
+                <Td label="Cliente">{customer.name}</Td>
+                <Td label="Contato">
+                  {customer.email}
+                  {customer.phone && ` · ${customer.phone}`}
+                </Td>
+                <Td label="Pedidos">{customer.orderCount}</Td>
+                <Td label="Total gasto">{formatCurrency(customer.totalSpent)}</Td>
+                <Td label="Último pedido">{customer.lastOrderAt}</Td>
               </tr>
-            </thead>
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.userId}>
-                  <td>{customer.name}</td>
-                  <td>
-                    {customer.email}
-                    {customer.phone && ` · ${customer.phone}`}
-                  </td>
-                  <td>{customer.orderCount}</td>
-                  <td>{formatCurrency(customer.totalSpent)}</td>
-                  <td>{customer.lastOrderAt}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

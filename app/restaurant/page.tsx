@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Clock, Printer, ClipboardList } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getOrdersForRestaurant, getCouriersForRestaurant } from '@/lib/restaurant-data';
 import { updateOrderStatusAsOwner, assignCourierToOrder, acceptOrder, rejectOrder } from './actions';
@@ -12,6 +13,11 @@ import {
   type PaymentStatus,
 } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
+import InlineSelect from '@/components/ui/InlineSelect';
 
 const PAYMENT_STATUS_CLASS: Record<string, string> = {
   pending: 'pending',
@@ -42,7 +48,7 @@ export default async function RestaurantOrdersPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <div className="status-filter-tabs">
         <Link href="/restaurant" className={!activeStatus ? 'active' : undefined}>
@@ -61,9 +67,10 @@ export default async function RestaurantOrdersPage({
 
       <h2>Pedidos ({orders.length})</h2>
       {orders.length === 0 ? (
-        <p className="empty-state">
-          {activeStatus ? `Nenhum pedido com status "${activeStatus}".` : 'Nenhum pedido recebido ainda.'}
-        </p>
+        <EmptyState
+          icon={ClipboardList}
+          title={activeStatus ? `Nenhum pedido com status "${activeStatus}"` : 'Nenhum pedido recebido ainda'}
+        />
       ) : (
         orders.map((order) => (
           <div className="order-item" key={order.id}>
@@ -71,18 +78,8 @@ export default async function RestaurantOrdersPage({
               <h4>
                 Pedido #{order.orderCode}
                 {order.origin === 'whatsapp' && (
-                  <span
-                    style={{
-                      marginLeft: 8,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: '#25D366',
-                      border: '1px solid #25D366',
-                      borderRadius: 999,
-                      padding: '2px 8px',
-                    }}
-                  >
-                    <i className="fab fa-whatsapp" aria-hidden="true" /> WhatsApp
+                  <span style={{ marginLeft: 'var(--space-2)' }}>
+                    <Badge tone="success">WhatsApp</Badge>
                   </span>
                 )}
               </h4>
@@ -95,8 +92,8 @@ export default async function RestaurantOrdersPage({
                 <strong>Recebido em:</strong> {order.createdAt}
               </p>
               {order.scheduledFor && (
-                <p style={{ color: '#b9770e', fontWeight: 600 }}>
-                  <i className="fas fa-clock" aria-hidden="true" /> Agendado para: {order.scheduledFor}
+                <p className="scheduled-notice">
+                  <Clock size={14} aria-hidden="true" /> Agendado para: {order.scheduledFor}
                 </p>
               )}
               <p>
@@ -135,7 +132,7 @@ export default async function RestaurantOrdersPage({
                   <li key={index}>
                     {item.quantity}x {item.name} ({formatCurrency(item.price)})
                     {item.options.length > 0 && (
-                      <span style={{ color: '#666' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
+                      <span style={{ color: 'var(--color-text-muted)' }}> — {item.options.map((o) => o.optionName).join(', ')}</span>
                     )}
                   </li>
                 ))}
@@ -145,65 +142,56 @@ export default async function RestaurantOrdersPage({
               </p>
             </div>
             {order.status === 'Pendente' && (
-              <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+              <div className="order-actions-row">
                 <form action={acceptOrder}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className="checkout-button"
-                    style={{ marginTop: 0, backgroundColor: '#43B55C' }}
-                  >
+                  <Button type="submit" variant="success" size="sm">
                     Aceitar pedido
-                  </button>
+                  </Button>
                 </form>
                 <form action={rejectOrder} className="admin-inline-form">
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="text" name="reason" placeholder="Motivo da recusa" required />
-                  <button type="submit" className="quantity-btn admin-btn" style={{ backgroundColor: '#F26666', color: '#fff' }}>
+                  <Button type="submit" variant="danger" size="sm">
                     Recusar
-                  </button>
+                  </Button>
                 </form>
               </div>
             )}
-            <form action={updateOrderStatusAsOwner} className="admin-inline-form" style={{ marginTop: 10 }}>
+            <form action={updateOrderStatusAsOwner} className="admin-inline-form" style={{ marginTop: 'var(--space-3)' }}>
               <input type="hidden" name="restaurantId" value={restaurantId} />
               <input type="hidden" name="orderId" value={order.id} />
-              <select name="status" defaultValue={order.status}>
+              <InlineSelect name="status" defaultValue={order.status}>
                 {ORDER_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {status}
                   </option>
                 ))}
-              </select>
-              <button type="submit" className="quantity-btn admin-btn">
+              </InlineSelect>
+              <Button type="submit" variant="secondary" size="sm">
                 Atualizar status
-              </button>
-              <a
-                href={`/print/orders/${order.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="quantity-btn admin-btn"
-              >
-                <i className="fas fa-print" aria-hidden="true" /> Imprimir comanda
+              </Button>
+              <a href={`/print/orders/${order.id}`} target="_blank" rel="noopener noreferrer" className="ui-button ui-button-secondary ui-button-sm">
+                <Printer size={14} aria-hidden="true" /> Imprimir comanda
               </a>
             </form>
             {couriers.length > 0 && (
-              <form action={assignCourierToOrder} className="admin-inline-form" style={{ marginTop: 10 }}>
+              <form action={assignCourierToOrder} className="admin-inline-form" style={{ marginTop: 'var(--space-3)' }}>
                 <input type="hidden" name="restaurantId" value={restaurantId} />
                 <input type="hidden" name="orderId" value={order.id} />
-                <select name="courierId" defaultValue={order.courierId ?? ''}>
+                <InlineSelect name="courierId" defaultValue={order.courierId ?? ''}>
                   <option value="">Sem entregador</option>
                   {couriers.map((courier) => (
                     <option key={courier.id} value={courier.id}>
                       {courier.fullName || courier.email}
                     </option>
                   ))}
-                </select>
-                <button type="submit" className="quantity-btn admin-btn">
+                </InlineSelect>
+                <Button type="submit" variant="secondary" size="sm">
                   Atribuir entregador
-                </button>
+                </Button>
               </form>
             )}
           </div>

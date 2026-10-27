@@ -1,7 +1,12 @@
+import { Star } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getReviewsForRestaurant } from '@/lib/reviews';
 import { replyToReview } from '../actions';
 import StarRating from '@/components/StarRating';
+import Textarea from '@/components/ui/Textarea';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,17 +24,17 @@ export default async function RestaurantReviewsPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <h2>Avaliações ({reviews.length})</h2>
       {reviews.length === 0 ? (
-        <p className="empty-state">Nenhuma avaliação recebida ainda.</p>
+        <EmptyState icon={Star} title="Nenhuma avaliação recebida ainda" />
       ) : (
         reviews.map((review) => (
-          <div key={review.id} className="order-item" style={{ marginBottom: 15 }}>
+          <div key={review.id} className="order-item">
             <div className="order-header">
               <StarRating value={review.rating} readOnly size={18} />
-              <span style={{ color: '#666', fontSize: '0.85rem' }}>{review.createdAt}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{review.createdAt}</span>
             </div>
             <div className="order-details">
               <p>
@@ -37,20 +42,17 @@ export default async function RestaurantReviewsPage({
               </p>
               {review.comment && <p>{review.comment}</p>}
               {review.restaurantReply ? (
-                <p style={{ color: '#666' }}>
+                <p>
                   <strong>Sua resposta:</strong> {review.restaurantReply}
                 </p>
               ) : (
-                <form action={replyToReview} style={{ marginTop: 10 }}>
+                <form action={replyToReview} style={{ marginTop: 'var(--space-3)' }}>
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="reviewId" value={review.id} />
-                  <div className="form-group">
-                    <label htmlFor={`reply-${review.id}`}>Responder</label>
-                    <textarea id={`reply-${review.id}`} name="reply" required style={{ minHeight: 50 }} />
-                  </div>
-                  <button type="submit" className="quantity-btn admin-btn">
+                  <Textarea label="Responder" id={`reply-${review.id}`} name="reply" required style={{ minHeight: 50 }} />
+                  <Button type="submit" variant="secondary" size="sm">
                     Enviar resposta
-                  </button>
+                  </Button>
                 </form>
               )}
             </div>

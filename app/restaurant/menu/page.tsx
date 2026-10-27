@@ -1,9 +1,16 @@
 import Link from 'next/link';
+import { UtensilsCrossed } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getMenuItemsForRestaurant, type OwnerMenuItem } from '@/lib/restaurant-data';
 import { createMenuItem, updateMenuItem, deleteMenuItem } from '../actions';
 import { formatCurrency } from '@/lib/format';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
+import Input from '@/components/ui/Input';
+import Checkbox from '@/components/ui/Checkbox';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +40,7 @@ export default async function RestaurantMenuPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <datalist id="menu-categories">
         {existingCategories.map((category) => (
@@ -43,126 +50,87 @@ export default async function RestaurantMenuPage({
 
       <h2>Itens do cardápio ({items.length})</h2>
       {items.length === 0 ? (
-        <p className="empty-state">Nenhum item cadastrado ainda.</p>
+        <EmptyState icon={UtensilsCrossed} title="Nenhum item cadastrado ainda" description="Cadastre o primeiro item no formulário abaixo." />
       ) : (
         groupedItems.map(([category, categoryItems]) => (
-          <div key={category} style={{ marginBottom: 20 }}>
+          <div key={category} style={{ marginBottom: 'var(--space-5)' }}>
             <h3 className="menu-category-title">{category}</h3>
             {categoryItems.map((item) => (
-              <details key={item.id} className="menu-item" style={{ display: 'block', padding: 15 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
+              <details key={item.id} className="menu-item-editor">
+                <summary>
                   {item.name} — {formatCurrency(item.price)}
                   {!item.active && (
-                    <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (inativo)</span>
+                    <span style={{ marginLeft: 'var(--space-2)' }}>
+                      <Badge tone="neutral">Inativo</Badge>
+                    </span>
                   )}
                 </summary>
-                <form action={updateMenuItem} className="checkout-form" style={{ marginTop: 15, boxShadow: 'none' }}>
+                <form action={updateMenuItem} className="menu-item-editor-form">
                   <input type="hidden" name="restaurantId" value={restaurantId} />
                   <input type="hidden" name="itemId" value={item.id} />
-                  <div className="form-group">
-                    <label htmlFor={`name-${item.id}`}>Nome</label>
-                    <input id={`name-${item.id}`} name="name" defaultValue={item.name} required />
-                  </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                    <input
-                      type="checkbox"
-                      name="active"
-                      defaultChecked={item.active}
-                      style={{ width: 20, height: 20, flexShrink: 0, margin: 0 }}
-                    />
-                    Item ativo (visível pro cliente)
-                  </label>
-                  <div className="form-group">
-                    <label htmlFor={`category-${item.id}`}>Categoria</label>
-                    <input
-                      id={`category-${item.id}`}
-                      name="category"
-                      list="menu-categories"
-                      defaultValue={item.category}
-                      placeholder="Ex: Lanches, Bebidas, Sobremesas"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`description-${item.id}`}>Descrição</label>
-                    <input id={`description-${item.id}`} name="description" defaultValue={item.description ?? ''} />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`price-${item.id}`}>Preço (R$)</label>
-                    <input
-                      id={`price-${item.id}`}
-                      name="price"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      defaultValue={item.price}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`imageUrl-${item.id}`}>URL da imagem</label>
-                    <input id={`imageUrl-${item.id}`} name="imageUrl" defaultValue={item.imageUrl ?? ''} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button type="submit" className="checkout-button" style={{ marginTop: 0 }}>
-                      Salvar
-                    </button>
-                  </div>
+                  <Input label="Nome" id={`name-${item.id}`} name="name" defaultValue={item.name} required />
+                  <Checkbox
+                    name="active"
+                    defaultChecked={item.active}
+                    label="Item ativo (visível pro cliente)"
+                    className="menu-item-active-checkbox"
+                  />
+                  <Input
+                    label="Categoria"
+                    id={`category-${item.id}`}
+                    name="category"
+                    list="menu-categories"
+                    defaultValue={item.category}
+                    placeholder="Ex: Lanches, Bebidas, Sobremesas"
+                  />
+                  <Input label="Descrição" id={`description-${item.id}`} name="description" defaultValue={item.description ?? ''} />
+                  <Input
+                    label="Preço (R$)"
+                    id={`price-${item.id}`}
+                    name="price"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    defaultValue={item.price}
+                    required
+                  />
+                  <Input label="URL da imagem" id={`imageUrl-${item.id}`} name="imageUrl" defaultValue={item.imageUrl ?? ''} />
+                  <Button type="submit" variant="primary">
+                    Salvar
+                  </Button>
                 </form>
-                <Link
-                  href={`/restaurant/menu/${item.id}/options`}
-                  className="quantity-btn admin-btn"
-                  style={{ display: 'inline-block', marginTop: 10, textAlign: 'center' }}
-                >
-                  Gerenciar adicionais
-                </Link>
-                <form action={deleteMenuItem} style={{ marginTop: 10 }}>
-                  <input type="hidden" name="restaurantId" value={restaurantId} />
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <ConfirmSubmitButton
-                    confirmMessage={`Excluir "${item.name}" do cardápio? Essa ação não pode ser desfeita — se preferir só esconder do cliente, desmarque "Item ativo" em vez disso.`}
-                    className="quantity-btn admin-btn"
-                  >
-                    Excluir item
-                  </ConfirmSubmitButton>
-                </form>
+                <div className="menu-item-editor-actions">
+                  <Link href={`/restaurant/menu/${item.id}/options`} className="ui-button ui-button-secondary ui-button-sm">
+                    Gerenciar adicionais
+                  </Link>
+                  <form action={deleteMenuItem}>
+                    <input type="hidden" name="restaurantId" value={restaurantId} />
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <ConfirmSubmitButton
+                      confirmMessage={`Excluir "${item.name}" do cardápio? Essa ação não pode ser desfeita — se preferir só esconder do cliente, desmarque "Item ativo" em vez disso.`}
+                      className="ui-button ui-button-secondary ui-button-sm"
+                    >
+                      Excluir item
+                    </ConfirmSubmitButton>
+                  </form>
+                </div>
               </details>
             ))}
           </div>
         ))
       )}
 
-      <h2 style={{ marginTop: 30 }}>Novo item</h2>
+      <h2 style={{ marginTop: 'var(--space-8)' }}>Novo item</h2>
       <form action={createMenuItem} className="checkout-form">
         <input type="hidden" name="restaurantId" value={restaurantId} />
-        <div className="form-group">
-          <label htmlFor="name">Nome</label>
-          <input id="name" name="name" required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="category">Categoria</label>
-          <input
-            id="category"
-            name="category"
-            list="menu-categories"
-            placeholder="Ex: Lanches, Bebidas, Sobremesas"
-            defaultValue="Geral"
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="description">Descrição</label>
-          <input id="description" name="description" />
-        </div>
-        <div className="form-group">
-          <label htmlFor="price">Preço (R$)</label>
-          <input id="price" name="price" type="number" step="0.01" min="0.01" required />
-        </div>
-        <div className="form-group">
-          <label htmlFor="imageUrl">URL da imagem</label>
-          <input id="imageUrl" name="imageUrl" placeholder="/unnamed.png" />
-        </div>
-        <button type="submit" className="checkout-button">
+        <Input label="Nome" id="name" name="name" required />
+        <Input label="Categoria" id="category" name="category" list="menu-categories" placeholder="Ex: Lanches, Bebidas, Sobremesas" defaultValue="Geral" />
+        <Input label="Descrição" id="description" name="description" />
+        <Input label="Preço (R$)" id="price" name="price" type="number" step="0.01" min="0.01" required />
+        <Input label="URL da imagem" id="imageUrl" name="imageUrl" placeholder="/unnamed.png" />
+        <Button type="submit" variant="primary" fullWidth>
           Adicionar item
-        </button>
+        </Button>
       </form>
     </div>
   );

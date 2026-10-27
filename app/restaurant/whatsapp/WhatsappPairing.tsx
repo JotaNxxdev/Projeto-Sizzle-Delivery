@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import Button from '@/components/ui/Button';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -91,9 +93,9 @@ export default function WhatsappPairing({ initiallyConnected }: { initiallyConne
         <p>
           <strong>WhatsApp conectado.</strong> O bot já está respondendo pelo número pareado.
         </p>
-        <button type="button" className="quantity-btn admin-btn" onClick={handleStart} style={{ marginTop: 10 }}>
+        <Button type="button" variant="secondary" size="sm" onClick={handleStart} style={{ marginTop: 'var(--space-3)' }}>
           Parear outro número
-        </button>
+        </Button>
       </div>
     );
   }
@@ -101,23 +103,21 @@ export default function WhatsappPairing({ initiallyConnected }: { initiallyConne
   return (
     <div className="order-item">
       {view.status === 'idle' && (
-        <button type="button" className="quantity-btn admin-btn" onClick={handleStart}>
+        <Button type="button" variant="primary" onClick={handleStart}>
           Gerar QR Code
-        </button>
+        </Button>
       )}
 
       {view.status === 'pairing' && (
         <div style={{ textAlign: 'center' }}>
           {view.qrCodeImage ? (
-            <img
-              src={view.qrCodeImage}
-              alt="QR Code pra conectar o WhatsApp"
-              style={{ width: 240, height: 240, margin: '10px auto', display: 'block' }}
-            />
+            <img src={view.qrCodeImage} alt="QR Code pra conectar o WhatsApp" className="whatsapp-qr-image" />
           ) : (
-            <p className="empty-state">Gerando QR Code...</p>
+            <p className="whatsapp-qr-loading">
+              <Loader2 size={18} aria-hidden="true" className="pix-waiting-spinner" /> Gerando QR Code...
+            </p>
           )}
-          <p className="empty-state" style={{ padding: 0 }}>
+          <p className="hint-text">
             No WhatsApp da loja: Configurações → Dispositivos conectados → Conectar um dispositivo, e escaneie. O
             código se renova sozinho se expirar — esta tela atualiza sozinha.
           </p>
@@ -126,10 +126,12 @@ export default function WhatsappPairing({ initiallyConnected }: { initiallyConne
 
       {view.status === 'error' && (
         <>
-          <p style={{ color: '#F26666' }}>{view.message}</p>
-          <button type="button" className="quantity-btn admin-btn" onClick={handleStart}>
+          <p className="ui-field-error" style={{ marginBottom: 'var(--space-3)' }}>
+            {view.message}
+          </p>
+          <Button type="button" variant="secondary" onClick={handleStart}>
             Tentar de novo
-          </button>
+          </Button>
         </>
       )}
     </div>
