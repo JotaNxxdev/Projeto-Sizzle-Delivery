@@ -1,5 +1,6 @@
 'use client';
 
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function BackButton({ label = 'Voltar' }: { label?: string }) {
@@ -10,8 +11,9 @@ export default function BackButton({ label = 'Voltar' }: { label?: string }) {
   }
 
   return (
-    <i
-      className="fas fa-arrow-left back-button"
+    <ArrowLeft
+      className="back-button"
+      size={24}
       role="button"
       tabIndex={0}
       aria-label={label}

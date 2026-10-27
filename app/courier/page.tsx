@@ -1,3 +1,4 @@
+import { Bike } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getCourierActiveOrders } from '@/lib/courier-data';
 import { markPickedUp, markDelivered } from './actions';
@@ -9,6 +10,9 @@ import {
   type PaymentMethod,
 } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
@@ -34,13 +38,13 @@ export default async function CourierPage({
 
   return (
     <div>
-      {error && <p className="empty-state">{error}</p>}
+      {error && <ErrorState description={error} />}
 
       <ClaimForm />
 
-      <h2 style={{ marginTop: 30 }}>Minhas entregas ({orders.length})</h2>
+      <h2 style={{ marginTop: 'var(--space-8)' }}>Minhas entregas ({orders.length})</h2>
       {orders.length === 0 ? (
-        <p className="empty-state">Nenhuma entrega atribuída a você no momento.</p>
+        <EmptyState icon={Bike} title="Nenhuma entrega atribuída a você no momento" />
       ) : (
         orders.map((order) => (
           <div className="order-item" key={order.id}>
@@ -81,20 +85,20 @@ export default async function CourierPage({
                 <strong>Total:</strong> {formatCurrency(order.total)}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+            <div className="order-actions-row">
               {order.status !== 'Saiu para entrega' && (
                 <form action={markPickedUp}>
                   <input type="hidden" name="orderId" value={order.id} />
-                  <button type="submit" className="quantity-btn admin-btn">
+                  <Button type="submit" variant="secondary" size="sm">
                     Marcar como retirado
-                  </button>
+                  </Button>
                 </form>
               )}
               <form action={markDelivered}>
                 <input type="hidden" name="orderId" value={order.id} />
-                <button type="submit" className="quantity-btn admin-btn">
+                <Button type="submit" variant="success" size="sm">
                   Marcar como entregue
-                </button>
+                </Button>
               </form>
             </div>
           </div>
