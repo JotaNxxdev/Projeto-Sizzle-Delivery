@@ -6,6 +6,7 @@ import StarRating from '@/components/StarRating';
 import { formatCurrency } from '@/lib/format';
 import { DELIVERY_METHOD_LABEL, PAYMENT_METHOD_LABEL, getPaymentStatusLabel, type Order } from '@/lib/types';
 import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 const STATUS_CLASS: Record<string, string> = {
   Pendente: 'pending',
@@ -36,6 +37,7 @@ async function fetchOrders(): Promise<Order[]> {
 
 export default function OrdersPage() {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -60,7 +62,13 @@ export default function OrdersPage() {
   }, []);
 
   async function handleCancel(orderCode: string) {
-    if (!window.confirm(`Cancelar o pedido #${orderCode}? Essa ação não pode ser desfeita.`)) return;
+    const ok = await confirm({
+      message: `Cancelar o pedido #${orderCode}? Essa ação não pode ser desfeita.`,
+      confirmLabel: 'Cancelar pedido',
+      cancelLabel: 'Voltar',
+      danger: true,
+    });
+    if (!ok) return;
 
     setCancellingId(orderCode);
     try {
