@@ -41,11 +41,14 @@
   --color-gray-800: #e4e5e7;
   --color-gray-900: #f7f7f8;
 
-  /* ---- Status (fundo em baixa opacidade sobre o tema escuro) ---- */
-  --color-success-bg: rgba(34, 197, 94, 0.16);
-  --color-success-border: rgba(34, 197, 94, 0.4);
-  --color-success: #22c55e;
-  --color-success-fg: #4ade80;
+  /* ---- Status (fundo em baixa opacidade sobre o tema escuro) ----
+     Sucesso usa um verde-esmeralda (mais pra ciano) de propósito —
+     diferente do verde da marca, pra "Sucesso" e "Primário" não virarem
+     a mesma cor de botão. */
+  --color-success-bg: rgba(16, 185, 129, 0.16);
+  --color-success-border: rgba(16, 185, 129, 0.4);
+  --color-success: #10b981;
+  --color-success-fg: #34d399;
 
   --color-warning-bg: rgba(245, 158, 11, 0.16);
   --color-warning-border: rgba(245, 158, 11, 0.4);
