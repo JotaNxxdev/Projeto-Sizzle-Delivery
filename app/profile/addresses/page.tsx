@@ -1,9 +1,16 @@
 import { redirect } from 'next/navigation';
+import { MapPinned } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getAddressesForUser } from '@/lib/addresses';
 import { createAddress, deleteAddress, setDefaultAddress } from './actions';
 import BackButton from '@/components/BackButton';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
+import Input from '@/components/ui/Input';
+import Checkbox from '@/components/ui/Checkbox';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,18 +32,16 @@ export default async function AddressesPage({
         <h1>Meus Endereços</h1>
       </header>
       <main className="app-main-menu">
-        {error && <p className="empty-state">{error}</p>}
+        {error && <ErrorState description={error} />}
 
         {addresses.length === 0 ? (
-          <p className="empty-state">Nenhum endereço salvo ainda.</p>
+          <EmptyState icon={MapPinned} title="Nenhum endereço salvo ainda" description="Cadastre um endereço abaixo pra agilizar seus próximos pedidos." />
         ) : (
           addresses.map((address) => (
             <div className="order-item" key={address.id}>
               <div className="order-header">
-                <h4>
-                  {address.label}
-                  {address.isDefault && <span style={{ color: '#43B55C', fontWeight: 600 }}> (padrão)</span>}
-                </h4>
+                <h4>{address.label}</h4>
+                {address.isDefault && <Badge tone="success">Padrão</Badge>}
               </div>
               <div className="order-details">
                 <p>
@@ -52,21 +57,18 @@ export default async function AddressesPage({
                   </p>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+              <div className="address-actions">
                 {!address.isDefault && (
                   <form action={setDefaultAddress}>
                     <input type="hidden" name="addressId" value={address.id} />
-                    <button type="submit" className="quantity-btn admin-btn">
+                    <Button type="submit" variant="secondary" size="sm">
                       Tornar padrão
-                    </button>
+                    </Button>
                   </form>
                 )}
                 <form action={deleteAddress}>
                   <input type="hidden" name="addressId" value={address.id} />
-                  <ConfirmSubmitButton
-                    confirmMessage={`Excluir o endereço "${address.label}"?`}
-                    className="quantity-btn admin-btn"
-                  >
+                  <ConfirmSubmitButton confirmMessage={`Excluir o endereço "${address.label}"?`} className="ui-button ui-button-secondary ui-button-sm">
                     Excluir
                   </ConfirmSubmitButton>
                 </form>
@@ -75,45 +77,21 @@ export default async function AddressesPage({
           ))
         )}
 
-        <h2 style={{ marginTop: 30 }}>Novo endereço</h2>
+        <h2 style={{ marginTop: 'var(--space-8)' }}>Novo endereço</h2>
         <form action={createAddress} className="checkout-form">
-          <div className="form-group">
-            <label htmlFor="label">Nome do endereço</label>
-            <input id="label" name="label" placeholder="Ex: Casa, Trabalho" defaultValue="Casa" />
-          </div>
-          <div className="form-group">
-            <label htmlFor="street">Rua</label>
-            <input id="street" name="street" required />
-          </div>
+          <Input label="Nome do endereço" id="label" name="label" placeholder="Ex: Casa, Trabalho" defaultValue="Casa" />
+          <Input label="Rua" id="street" name="street" required />
           <div className="form-row">
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="streetNumber">Número</label>
-              <input id="streetNumber" name="streetNumber" required />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="complement">Complemento</label>
-              <input id="complement" name="complement" placeholder="Apto, bloco... (opcional)" />
-            </div>
+            <Input label="Número" id="streetNumber" name="streetNumber" required />
+            <Input label="Complemento" id="complement" name="complement" placeholder="Apto, bloco... (opcional)" />
           </div>
-          <div className="form-group">
-            <label htmlFor="neighborhood">Bairro</label>
-            <input id="neighborhood" name="neighborhood" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="city">Cidade</label>
-            <input id="city" name="city" required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="referencePoint">Ponto de referência</label>
-            <input id="referencePoint" name="referencePoint" placeholder="Opcional" />
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <input type="checkbox" name="isDefault" style={{ width: 20, height: 20, flexShrink: 0, margin: 0 }} />
-            Definir como endereço padrão
-          </label>
-          <button type="submit" className="checkout-button">
+          <Input label="Bairro" id="neighborhood" name="neighborhood" required />
+          <Input label="Cidade" id="city" name="city" required />
+          <Input label="Ponto de referência" id="referencePoint" name="referencePoint" placeholder="Opcional" />
+          <Checkbox name="isDefault" label="Definir como endereço padrão" className="address-default-checkbox" />
+          <Button type="submit" variant="primary" fullWidth size="lg">
             Salvar endereço
-          </button>
+          </Button>
         </form>
       </main>
     </div>

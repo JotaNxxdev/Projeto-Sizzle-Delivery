@@ -1,5 +1,6 @@
 'use client';
 
+import { Heart } from 'lucide-react';
 import { useFavorites } from '@/contexts/FavoritesContext';
 
 export default function FavoriteButton({
@@ -31,7 +32,7 @@ export default function FavoriteButton({
         toggleFavorite(restaurantId);
       }}
     >
-      <i className={`${favorited ? 'fas' : 'far'} fa-heart`} aria-hidden="true" />
+      <Heart size={17} fill={favorited ? 'currentColor' : 'none'} aria-hidden="true" />
     </button>
   );
 }

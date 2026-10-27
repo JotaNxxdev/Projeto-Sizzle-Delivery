@@ -1,5 +1,7 @@
 'use client';
 
+import { Star } from 'lucide-react';
+
 interface StarRatingProps {
   value: number;
   onChange?: (value: number) => void;
@@ -13,16 +15,14 @@ export default function StarRating({ value, onChange, readOnly = false, size = 2
   return (
     <div role={readOnly ? undefined : 'radiogroup'} aria-label="Avaliação em estrelas" style={{ display: 'inline-flex', gap: 4 }}>
       {stars.map((star) => (
-        <i
+        <Star
           key={star}
-          className={`fa-star ${star <= value ? 'fas' : 'far'}`}
+          size={size}
+          fill={star <= value ? '#f5b400' : 'none'}
+          color={star <= value ? '#f5b400' : 'var(--color-gray-300)'}
           aria-hidden="true"
           onClick={readOnly ? undefined : () => onChange?.(star)}
-          style={{
-            color: star <= value ? '#FFD700' : '#ccc',
-            fontSize: size,
-            cursor: readOnly ? 'default' : 'pointer',
-          }}
+          style={{ cursor: readOnly ? 'default' : 'pointer' }}
         />
       ))}
     </div>

@@ -1,9 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { UtensilsCrossed } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/format';
 import MenuItemOptionsModal from '@/components/MenuItemOptionsModal';
+import EmptyState from '@/components/ui/EmptyState';
 import type { MenuItem, Restaurant, SelectedOption } from '@/lib/types';
 
 export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
@@ -59,7 +61,7 @@ export default function MenuClient({ restaurant }: { restaurant: Restaurant }) {
   }
 
   if (restaurant.menu.length === 0) {
-    return <p className="empty-state">Este restaurante ainda não tem itens no cardápio.</p>;
+    return <EmptyState icon={UtensilsCrossed} title="Cardápio vazio" description="Este restaurante ainda não tem itens no cardápio." />;
   }
 
   return (

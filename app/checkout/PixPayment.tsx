@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import type { PaymentStatus } from '@/lib/types';
 import { PAYMENT_STATUS_LABEL } from '@/lib/types';
 import { useToast } from '@/contexts/ToastContext';
+import Button from '@/components/ui/Button';
 
 const POLL_INTERVAL_MS = 4000;
 const TERMINAL_STATUSES: PaymentStatus[] = ['approved', 'rejected', 'cancelled', 'refunded'];
@@ -68,11 +70,11 @@ export default function PixPayment({
   if (status === 'approved') {
     return (
       <div className="checkout-form" style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#43B55C' }}>Pagamento confirmado!</h2>
+        <h2 style={{ color: 'var(--color-success)' }}>Pagamento confirmado!</h2>
         <p>Seu pedido #{orderCode} foi pago e já foi enviado para o restaurante.</p>
-        <button className="checkout-button" onClick={() => router.push('/orders')}>
+        <Button variant="primary" fullWidth onClick={() => router.push('/orders')}>
           Ver meus pedidos
-        </button>
+        </Button>
       </div>
     );
   }
@@ -80,11 +82,11 @@ export default function PixPayment({
   if (status === 'rejected' || status === 'cancelled') {
     return (
       <div className="checkout-form" style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#F26666' }}>{PAYMENT_STATUS_LABEL[status]}</h2>
+        <h2 style={{ color: 'var(--color-danger)' }}>{PAYMENT_STATUS_LABEL[status]}</h2>
         <p>O pagamento do pedido #{orderCode} não foi concluído. Você pode tentar novamente pela tela de pedidos.</p>
-        <button className="checkout-button" onClick={() => router.push('/orders')}>
+        <Button variant="primary" fullWidth onClick={() => router.push('/orders')}>
           Ver meus pedidos
-        </button>
+        </Button>
       </div>
     );
   }
@@ -92,33 +94,28 @@ export default function PixPayment({
   return (
     <div className="checkout-form" style={{ textAlign: 'center' }}>
       <h2>Pague com Pix para confirmar</h2>
-      <p style={{ color: '#666' }}>Pedido #{orderCode} — escaneie o QR Code ou copie o código abaixo</p>
+      <p style={{ color: 'var(--color-text-muted)' }}>Pedido #{orderCode} — escaneie o QR Code ou copie o código abaixo</p>
 
       {qrCodeBase64 && (
         <img
           src={`data:image/png;base64,${qrCodeBase64}`}
           alt="QR Code Pix"
-          style={{ width: 220, height: 220, margin: '15px auto', display: 'block' }}
+          className="pix-qr-image"
         />
       )}
 
       {qrCode && (
         <>
-          <textarea
-            readOnly
-            value={qrCode}
-            rows={3}
-            style={{ width: '100%', fontSize: '0.75rem', marginBottom: 10, resize: 'none' }}
-            onFocus={(event) => event.target.select()}
-          />
-          <button type="button" className="add-to-cart-button" onClick={handleCopy} style={{ marginBottom: 15 }}>
+          <textarea readOnly value={qrCode} rows={3} className="ui-textarea pix-code-textarea" onFocus={(event) => event.target.select()} />
+          <Button type="button" variant="secondary" fullWidth style={{ marginBottom: 'var(--space-4)' }} onClick={handleCopy}>
             {copied ? 'Copiado!' : 'Copiar código Pix'}
-          </button>
+          </Button>
         </>
       )}
 
-      <p className="empty-state" style={{ padding: 0 }}>
-        Aguardando confirmação do pagamento... esta tela atualiza sozinha.
+      <p className="pix-waiting">
+        <Loader2 className="pix-waiting-spinner" size={16} aria-hidden="true" /> Aguardando confirmação do pagamento... esta tela
+        atualiza sozinha.
       </p>
     </div>
   );

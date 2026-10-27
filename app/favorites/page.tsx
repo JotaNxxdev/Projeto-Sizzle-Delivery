@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { Heart, Star } from 'lucide-react';
 import { getCurrentProfile } from '@/lib/auth';
 import { getRestaurants } from '@/lib/restaurants';
 import { getFavoriteRestaurantIds } from '@/lib/favorites';
 import { formatCurrency } from '@/lib/format';
 import BackButton from '@/components/BackButton';
 import FavoriteButton from '@/components/FavoriteButton';
+import EmptyState from '@/components/ui/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +27,11 @@ export default async function FavoritesPage() {
       <main className="app-main-menu">
         <div className="restaurant-grid">
           {favoriteRestaurants.length === 0 ? (
-            <p className="empty-state">
-              Você ainda não favoritou nenhum restaurante — toque no coração num restaurante pra salvar aqui.
-            </p>
+            <EmptyState
+              icon={Heart}
+              title="Nenhum favorito ainda"
+              description="Toque no coração de um restaurante pra salvar aqui."
+            />
           ) : (
             favoriteRestaurants.map((restaurant) => (
               <Link
@@ -44,11 +48,11 @@ export default async function FavoritesPage() {
                   <h3>
                     {restaurant.name}
                     {!restaurant.isOpenNow && (
-                      <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (Fechado)</span>
+                      <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--text-xs)' }}> (Fechado)</span>
                     )}
                   </h3>
                   <p className="details">
-                    <i className="fas fa-star rating-icon" aria-hidden="true" /> {restaurant.rating} •{' '}
+                    <Star className="rating-icon" size={14} fill="#f5b400" aria-hidden="true" /> {restaurant.rating} •{' '}
                     {restaurant.deliveryTime} •{' '}
                     {restaurant.deliveryFee > 0 ? formatCurrency(restaurant.deliveryFee) : 'Entrega grátis'}
                   </p>

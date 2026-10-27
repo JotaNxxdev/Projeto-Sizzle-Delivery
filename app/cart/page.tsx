@@ -1,9 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Minus, Plus, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/contexts/ToastContext';
 import BackButton from '@/components/BackButton';
+import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency } from '@/lib/format';
 
 // Mesmo teto validado no servidor (app/api/orders/route.ts) — só pra não
@@ -41,7 +43,7 @@ export default function CartPage() {
       <main className="app-main-menu cart-main">
         <div id="cart-items-list">
           {cart.length === 0 ? (
-            <p className="empty-state">Seu carrinho está vazio.</p>
+            <EmptyState icon={ShoppingCart} title="Seu carrinho está vazio" description="Adicione itens de um restaurante para continuar." />
           ) : (
             cart.map((item) => (
               <div className="cart-item" key={item.cartItemId}>
@@ -50,9 +52,7 @@ export default function CartPage() {
                   <h4>{item.name}</h4>
                   <p>{formatCurrency(item.price)}</p>
                   {item.selectedOptions.length > 0 && (
-                    <p style={{ color: '#666', fontSize: '0.85rem' }}>
-                      {item.selectedOptions.map((option) => option.valueName).join(', ')}
-                    </p>
+                    <p className="cart-item-options">{item.selectedOptions.map((option) => option.valueName).join(', ')}</p>
                   )}
                 </div>
                 <div className="item-quantity-price">
@@ -62,7 +62,7 @@ export default function CartPage() {
                       onClick={() => updateQuantity(item.cartItemId, -1)}
                       aria-label={`Diminuir quantidade de ${item.name}`}
                     >
-                      -
+                      <Minus size={14} aria-hidden="true" />
                     </button>
                     <span className="item-quantity">{item.quantity}</span>
                     <button
@@ -71,7 +71,7 @@ export default function CartPage() {
                       aria-label={`Aumentar quantidade de ${item.name}`}
                       disabled={item.quantity >= MAX_ITEM_QUANTITY}
                     >
-                      +
+                      <Plus size={14} aria-hidden="true" />
                     </button>
                   </div>
                   <span className="item-price">{formatCurrency(item.price * item.quantity)}</span>
@@ -95,10 +95,10 @@ export default function CartPage() {
             <span>{formatCurrency(total)}</span>
           </div>
           {belowMinimum && (
-            <p className="empty-state" style={{ backgroundColor: '#fdecea', borderRadius: 10, padding: 12 }}>
+            <div className="closed-banner">
               Pedido mínimo desse restaurante: {formatCurrency(minOrderValue)}. Faltam{' '}
               {formatCurrency(minOrderValue - subtotal)}.
-            </p>
+            </div>
           )}
           <button className="checkout-button" onClick={handleCheckout} disabled={belowMinimum}>
             Finalizar Pedido

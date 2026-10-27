@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { formatCurrency } from '@/lib/format';
 import type { MenuItem, SelectedOption } from '@/lib/types';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Checkbox from '@/components/ui/Checkbox';
+import Radio from '@/components/ui/Radio';
 
 interface Props {
   item: MenuItem;
@@ -43,51 +47,57 @@ export default function MenuItemOptionsModal({ item, onConfirm, onClose }: Props
   });
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(event) => event.stopPropagation()}>
-        <h3>{item.name}</h3>
-        {item.optionGroups.map((group) => (
-          <div key={group.id} style={{ marginBottom: 15 }}>
-            <p style={{ fontWeight: 600, marginBottom: 5 }}>
-              {group.name}{' '}
-              <span style={{ color: '#666', fontWeight: 400, fontSize: '0.85rem' }}>
-                ({group.minSelections > 0 ? `mín. ${group.minSelections}, ` : 'opcional, '}máx. {group.maxSelections})
-              </span>
-            </p>
-            {group.values.map((value) => {
-              const checked = (selected[group.id] ?? []).includes(value.id);
-              return (
-                <label key={value.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <input
-                    type={group.maxSelections === 1 ? 'radio' : 'checkbox'}
-                    name={`group-${group.id}`}
-                    checked={checked}
-                    onChange={() => toggleValue(group.id, value.id, group.maxSelections)}
-                    style={{ width: 18, height: 18, flexShrink: 0, margin: 0 }}
-                  />
-                  {value.name}
-                  {value.priceDelta > 0 && ` (+${formatCurrency(value.priceDelta)})`}
-                </label>
-              );
-            })}
-          </div>
-        ))}
-        <p style={{ fontWeight: 600, fontSize: '1.1rem' }}>Total: {formatCurrency(unitPrice)}</p>
-        <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
-          <button
-            type="button"
-            className="checkout-button"
-            style={{ marginTop: 0 }}
-            onClick={() => onConfirm(selectedOptions, unitPrice)}
-            disabled={!isValid}
-          >
-            Adicionar
-          </button>
-          <button type="button" className="add-to-cart-button" onClick={onClose}>
+    <Modal
+      title={item.name}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
+          </Button>
+          <Button variant="primary" onClick={() => onConfirm(selectedOptions, unitPrice)} disabled={!isValid}>
+            Adicionar — {formatCurrency(unitPrice)}
+          </Button>
+        </>
+      }
+    >
+      {item.optionGroups.map((group) => (
+        <div key={group.id} className="option-group">
+          <p className="option-group-title">
+            {group.name}{' '}
+            <span className="option-group-hint">
+              ({group.minSelections > 0 ? `mín. ${group.minSelections}, ` : 'opcional, '}máx. {group.maxSelections})
+            </span>
+          </p>
+          {group.values.map((value) => {
+            const checked = (selected[group.id] ?? []).includes(value.id);
+            const label = (
+              <>
+                {value.name}
+                {value.priceDelta > 0 && ` (+${formatCurrency(value.priceDelta)})`}
+              </>
+            );
+            return group.maxSelections === 1 ? (
+              <Radio
+                key={value.id}
+                className="option-value"
+                name={`group-${group.id}`}
+                checked={checked}
+                onChange={() => toggleValue(group.id, value.id, group.maxSelections)}
+                label={label}
+              />
+            ) : (
+              <Checkbox
+                key={value.id}
+                className="option-value"
+                checked={checked}
+                onChange={() => toggleValue(group.id, value.id, group.maxSelections)}
+                label={label}
+              />
+            );
+          })}
         </div>
-      </div>
-    </div>
+      ))}
+    </Modal>
   );
 }

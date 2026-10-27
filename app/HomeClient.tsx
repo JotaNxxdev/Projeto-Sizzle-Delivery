@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { MapPin, Search, Star, UtensilsCrossed, Pizza, Beef, Fish } from 'lucide-react';
 import type { Restaurant } from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
 import FavoriteButton from '@/components/FavoriteButton';
+import EmptyState from '@/components/ui/EmptyState';
 
 const CATEGORIES = [
-  { id: 'pizza', label: 'Pizzas', icon: 'fa-pizza-slice' },
-  { id: 'lanches', label: 'Lanches', icon: 'fa-burger' },
-  { id: 'japonesa', label: 'Japonesa', icon: 'fa-fish' },
-  { id: 'brasileira', label: 'Brasileira', icon: 'fa-utensils' },
+  { id: 'pizza', label: 'Pizzas', Icon: Pizza },
+  { id: 'lanches', label: 'Lanches', Icon: Beef },
+  { id: 'japonesa', label: 'Japonesa', Icon: Fish },
+  { id: 'brasileira', label: 'Brasileira', Icon: UtensilsCrossed },
 ];
 
 export default function HomeClient({ restaurants }: { restaurants: Restaurant[] }) {
@@ -57,10 +59,10 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
       <header className="app-header">
         <div className="header-top">
           <img src="/LOGOR.png" alt="Sizzle Logo" className="sizzle-logo-header" />
-          <i className="fas fa-map-marker-alt location-icon" aria-hidden="true" />
+          <MapPin className="location-icon" size={22} aria-hidden="true" />
         </div>
         <div className="search-bar-container">
-          <i className="fas fa-search search-icon" aria-hidden="true" />
+          <Search className="search-icon" size={18} aria-hidden="true" />
           <input
             type="text"
             className="search-bar"
@@ -90,7 +92,7 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
               }}
             >
               <div className="category-icon-container">
-                <i className={`fas ${category.icon} category-icon`} aria-hidden="true" />
+                <category.Icon className="category-icon" size={22} aria-hidden="true" />
               </div>
               <span>{category.label}</span>
             </div>
@@ -123,7 +125,7 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
           <h2>Restaurantes Próximos</h2>
           <div className="restaurant-grid">
             {filteredRestaurants.length === 0 ? (
-              <p className="empty-state">Nenhum restaurante encontrado.</p>
+              <EmptyState icon={Search} title="Nenhum restaurante encontrado" description="Tente buscar por outro nome, prato ou categoria." />
             ) : (
               filteredRestaurants.map((restaurant) => (
                 <Link
@@ -140,11 +142,11 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
                     <h3>
                       {restaurant.name}
                       {!restaurant.isOpenNow && (
-                        <span style={{ color: '#F26666', fontWeight: 600, fontSize: '0.8rem' }}> (Fechado)</span>
+                        <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 'var(--text-xs)' }}> (Fechado)</span>
                       )}
                     </h3>
                     <p className="details">
-                      <i className="fas fa-star rating-icon" aria-hidden="true" /> {restaurant.rating} •{' '}
+                      <Star className="rating-icon" size={14} fill="#f5b400" aria-hidden="true" /> {restaurant.rating} •{' '}
                       {restaurant.deliveryTime} •{' '}
                       {restaurant.deliveryFee > 0 ? formatCurrency(restaurant.deliveryFee) : 'Entrega grátis'}
                     </p>
