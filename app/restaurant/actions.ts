@@ -705,3 +705,37 @@ export async function purchasePromotion(formData: FormData) {
 
   redirect(initPoint);
 }
+
+// Pede um destaque pago via Pix manual — sem passar pelo Mercado Pago. O
+// dono paga por fora, pra chave Pix da própria Sizzle (mostrada na tela),
+// e manda o comprovante; o admin confirma o pagamento em
+// /admin/promotions ("Confirmar pagamento"), que é quando o destaque vira
+// 'active' de verdade.
+export async function requestPromotionPix(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const { db } = await requireOwnerOf(restaurantId);
+
+  const title = String(formData.get('title') || '').trim();
+  const imageUrl = String(formData.get('imageUrl') || '').trim() || null;
+  const days = Number(formData.get('days') || 0);
+  const price = getPromotionPlanPrice(days);
+
+  if (!title) fail('/restaurant/promote', 'Escreva o texto do banner.');
+  if (imageUrl && !isValidImageUrl(imageUrl)) fail('/restaurant/promote', 'Imagem inválida.');
+  if (price == null) fail('/restaurant/promote', 'Escolha um plano de duração válido.');
+
+  const { error } = await db.from('restaurant_promotions').insert({
+    restaurant_id: restaurantId,
+    title,
+    image_url: imageUrl,
+    duration_days: days,
+    price,
+    payment_method: 'manual',
+    status: 'pending_payment',
+  });
+
+  if (error) fail('/restaurant/promote', 'Não foi possível registrar o pedido de destaque.');
+
+  revalidatePath('/restaurant/promote');
+  redirect('/restaurant/promote?pix=requested');
+}
