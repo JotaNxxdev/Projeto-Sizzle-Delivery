@@ -14,8 +14,9 @@ const NAV_ITEMS = [
 
 // Painéis de dono de restaurante, admin e entregador têm a própria
 // navegação e ocupam a tela inteira — a barra do cliente só atrapalha,
-// sobrepondo conteúdo neles.
-const HIDDEN_PREFIXES = ['/restaurant', '/admin', '/courier'];
+// sobrepondo conteúdo neles. A landing de vendas também tem a própria
+// navegação (institucional, não é tela do app).
+const HIDDEN_PREFIXES = ['/restaurant', '/admin', '/courier', '/para-restaurantes'];
 
 export default function BottomNav() {
   const pathname = usePathname();
