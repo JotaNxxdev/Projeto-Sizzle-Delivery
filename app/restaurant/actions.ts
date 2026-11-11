@@ -2,12 +2,15 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { supabase } from '@/lib/supabase';
 import { getCurrentProfile, type CurrentProfile } from '@/lib/auth';
 import { logAudit } from '@/lib/audit';
 import { isValidImageUrl } from '@/lib/image-url';
 import { sendPushToUser } from '@/lib/push';
 import type { BusinessHours } from '@/lib/types';
+import { getPromotionPlanPrice } from '@/lib/promotions';
+import { createCheckoutPreference, isMercadoPagoPlatformConfigured } from '@/lib/mercadopago';
 
 async function requireOwnerOf(restaurantId: string): Promise<{ profile: CurrentProfile; db: NonNullable<typeof supabase> }> {
   const profile = await getCurrentProfile();
@@ -636,4 +639,69 @@ export async function reactivateWhatsappSession(formData: FormData) {
   if (error) fail('/restaurant/whatsapp', 'Não foi possível reativar essa conversa.');
 
   revalidatePath('/restaurant/whatsapp');
+}
+
+// Compra um destaque pago no carrossel "Destaques para você" da home.
+// Cria a linha pendente e manda o dono pra página hospedada do Mercado
+// Pago (Checkout Pro) — ela já aceita cartão, Pix e boleto sozinha, sem a
+// gente tocar em dado de cartão em nenhum momento. A confirmação de verdade
+// chega depois, pelo webhook (app/api/webhooks/mercadopago), que ativa o
+// destaque quando o pagamento for aprovado.
+export async function purchasePromotion(formData: FormData) {
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const { db } = await requireOwnerOf(restaurantId);
+
+  if (!isMercadoPagoPlatformConfigured) {
+    fail('/restaurant/promote', 'Pagamento por cartão ainda não configurado pelo administrador do sistema.');
+  }
+
+  const title = String(formData.get('title') || '').trim();
+  const imageUrl = String(formData.get('imageUrl') || '').trim() || null;
+  const days = Number(formData.get('days') || 0);
+  const price = getPromotionPlanPrice(days);
+
+  if (!title) fail('/restaurant/promote', 'Escreva o texto do banner.');
+  if (imageUrl && !isValidImageUrl(imageUrl)) fail('/restaurant/promote', 'Imagem inválida.');
+  if (price == null) fail('/restaurant/promote', 'Escolha um plano de duração válido.');
+
+  const { data: promotion, error: insertError } = await db
+    .from('restaurant_promotions')
+    .insert({
+      restaurant_id: restaurantId,
+      title,
+      image_url: imageUrl,
+      duration_days: days,
+      price,
+      payment_method: 'mercadopago',
+      status: 'pending_payment',
+    })
+    .select('id')
+    .single();
+
+  if (insertError || !promotion) {
+    fail('/restaurant/promote', 'Não foi possível iniciar a compra do destaque.');
+  }
+
+  const requestHeaders = await headers();
+  const origin = `${requestHeaders.get('x-forwarded-proto') ?? 'https'}://${requestHeaders.get('host')}`;
+
+  let initPoint: string;
+  try {
+    const preference = await createCheckoutPreference({
+      title: `Destaque Sizzle — ${days} dias: ${title}`,
+      price,
+      externalReference: promotion!.id,
+      notificationUrl: `${origin}/api/webhooks/mercadopago`,
+      successUrl: `${origin}/restaurant/promote`,
+      failureUrl: `${origin}/restaurant/promote`,
+    });
+    initPoint = preference.initPoint;
+    await db.from('restaurant_promotions').update({ mp_preference_id: preference.preferenceId }).eq('id', promotion!.id);
+  } catch (err) {
+    console.error('[Sizzle] Erro ao criar preferência de pagamento do destaque:', err);
+    await db.from('restaurant_promotions').delete().eq('id', promotion!.id);
+    fail('/restaurant/promote', 'Não foi possível iniciar o pagamento. Tente novamente em instantes.');
+  }
+
+  redirect(initPoint);
 }

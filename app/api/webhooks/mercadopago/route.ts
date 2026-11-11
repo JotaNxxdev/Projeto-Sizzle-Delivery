@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { getPaymentStatus } from '@/lib/mercadopago';
+import { getPaymentStatus, getPlatformPayment } from '@/lib/mercadopago';
 
 // O Mercado Pago chama esta rota quando o status de um pagamento muda.
 // Nunca confiamos no corpo da notificação em si (qualquer um pode fazer um
@@ -54,27 +54,64 @@ export async function POST(request: NextRequest) {
       .eq('mp_payment_id', paymentId)
       .single();
 
-    if (!order) {
+    if (order) {
+      let restaurantToken: string | null = null;
+      if (order.restaurant_id) {
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('mp_access_token')
+          .eq('id', order.restaurant_id)
+          .single();
+        restaurantToken = restaurant?.mp_access_token ?? null;
+      }
+
+      const status = await getPaymentStatus(paymentId, restaurantToken);
+      if (status) {
+        await supabase.from('orders').update({ payment_status: status }).eq('id', order.id);
+      }
+
       return NextResponse.json({ received: true });
     }
 
-    let restaurantToken: string | null = null;
-    if (order.restaurant_id) {
-      const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('mp_access_token')
-        .eq('id', order.restaurant_id)
-        .single();
-      restaurantToken = restaurant?.mp_access_token ?? null;
-    }
-
-    const status = await getPaymentStatus(paymentId, restaurantToken);
-    if (status) {
-      await supabase.from('orders').update({ payment_status: status }).eq('id', order.id);
-    }
+    // Não é pagamento de pedido de cliente — pode ser um pagamento feito na
+    // conta da própria plataforma (ex.: destaque pago via Checkout Pro).
+    // Nesse caso o "external_reference" que a gente definiu ao criar a
+    // preferência é o id da linha em restaurant_promotions.
+    await resolvePromotionPayment(supabase, paymentId);
   } catch (err) {
     console.error('[Sizzle] Erro ao processar webhook do Mercado Pago:', err);
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function resolvePromotionPayment(db: NonNullable<typeof supabase>, paymentId: string): Promise<void> {
+  const payment = await getPlatformPayment(paymentId);
+  if (!payment?.externalReference) return;
+
+  const { data: promotion } = await db
+    .from('restaurant_promotions')
+    .select('id, duration_days, status')
+    .eq('id', payment.externalReference)
+    .eq('payment_method', 'mercadopago')
+    .single();
+
+  if (!promotion || promotion.status !== 'pending_payment') return;
+
+  if (payment.status === 'approved') {
+    const startsAt = new Date();
+    const expiresAt = new Date(startsAt.getTime() + promotion.duration_days * 24 * 60 * 60 * 1000);
+    await db
+      .from('restaurant_promotions')
+      .update({
+        status: 'active',
+        mp_payment_id: paymentId,
+        starts_at: startsAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+      })
+      .eq('id', promotion.id);
+  } else if (payment.status === 'rejected' || payment.status === 'cancelled') {
+    await db.from('restaurant_promotions').update({ status: 'cancelled', mp_payment_id: paymentId }).eq('id', promotion.id);
+  }
+  // 'pending'/'in_process': não faz nada ainda, próxima notificação resolve.
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Receipt, LineChart, UtensilsCrossed, Bike, Tag, BookUser, MessageCircle, Star, Store } from 'lucide-react';
+import { Receipt, LineChart, UtensilsCrossed, Bike, Tag, BookUser, MessageCircle, Star, Store, Megaphone } from 'lucide-react';
 import TabBar, { type TabBarItem } from '@/components/TabBar';
 
 const TABS: TabBarItem[] = [
@@ -9,6 +9,7 @@ const TABS: TabBarItem[] = [
   { href: '/restaurant/menu', label: 'Cardápio', icon: UtensilsCrossed },
   { href: '/restaurant/couriers', label: 'Entregadores', icon: Bike },
   { href: '/restaurant/coupons', label: 'Cupons', icon: Tag },
+  { href: '/restaurant/promote', label: 'Divulgar', icon: Megaphone },
   { href: '/restaurant/customers', label: 'Clientes', icon: BookUser },
   { href: '/restaurant/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { href: '/restaurant/reviews', label: 'Avaliações', icon: Star },
