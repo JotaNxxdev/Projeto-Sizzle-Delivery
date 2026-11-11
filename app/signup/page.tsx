@@ -94,6 +94,9 @@ export default function SignupPage() {
           <p className="auth-footer">
             Já tem conta? <Link href="/login">Entrar</Link>
           </p>
+          <p className="auth-footer">
+            É dono de restaurante? <Link href="/para-restaurantes">Conheça o Sizzle para o seu negócio</Link>
+          </p>
         </div>
       </div>
     </div>
