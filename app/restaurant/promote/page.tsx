@@ -20,13 +20,14 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function RestaurantPromotePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; status?: string }>;
+  searchParams: Promise<{ error?: string; status?: string; pix?: string }>;
 }) {
-  const { error, status } = await searchParams;
+  const { error, status, pix } = await searchParams;
   const profile = await getCurrentProfile();
   if (!profile?.restaurantId) return null; // o layout já trata esse caso
 
   const promotions = await getPromotionsForRestaurant(profile.restaurantId);
+  const platformPixKey = process.env.PLATFORM_PIX_KEY || null;
 
   return (
     <div>
@@ -40,6 +41,11 @@ export default async function RestaurantPromotePage({
         <p className="empty-state">Pagamento em processamento — assim que o Mercado Pago confirmar, seu destaque é ativado automaticamente.</p>
       )}
       {status === 'rejected' && <p className="empty-state">O pagamento não foi aprovado. Você pode tentar de novo no formulário abaixo.</p>}
+      {pix === 'requested' && (
+        <p className="empty-state" style={{ color: 'var(--color-success)' }}>
+          Pedido registrado! Assim que confirmarmos o Pix, seu destaque vira &quot;Ativo&quot; na tabela abaixo.
+        </p>
+      )}
 
       <h2>Destaque na home ({promotions.length})</h2>
       <p className="hint-text">
@@ -89,7 +95,7 @@ export default async function RestaurantPromotePage({
       )}
 
       <h2 style={{ marginTop: 'var(--space-8)' }}>Comprar novo destaque</h2>
-      <PromoteForm restaurantId={profile.restaurantId} />
+      <PromoteForm restaurantId={profile.restaurantId} platformPixKey={platformPixKey} />
     </div>
   );
 }

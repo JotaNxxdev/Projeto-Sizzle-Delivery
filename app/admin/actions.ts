@@ -353,6 +353,49 @@ export async function createPromotionManual(formData: FormData) {
   revalidatePath('/');
 }
 
+// Confirma que o Pix manual de um destaque pedido pelo dono caiu de
+// verdade — ativa o destaque a partir de agora, pelo período comprado.
+// Só faz sentido pra uma linha ainda 'pending_payment' (pedido via Pix
+// manual em /restaurant/promote, ou de qualquer outra origem presa nesse
+// status).
+export async function confirmPromotionPayment(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const promotionId = String(formData.get('promotionId') || '');
+  if (!promotionId) fail('/admin/promotions', 'Destaque é obrigatório.');
+
+  const { data: promotion } = await db
+    .from('restaurant_promotions')
+    .select('duration_days, status')
+    .eq('id', promotionId)
+    .single();
+
+  if (!promotion || promotion.status !== 'pending_payment') {
+    fail('/admin/promotions', 'Esse destaque não está aguardando confirmação de pagamento.');
+  }
+
+  const startsAt = new Date();
+  const expiresAt = new Date(startsAt.getTime() + promotion!.duration_days * 24 * 60 * 60 * 1000);
+
+  const { error } = await db
+    .from('restaurant_promotions')
+    .update({ status: 'active', starts_at: startsAt.toISOString(), expires_at: expiresAt.toISOString() })
+    .eq('id', promotionId);
+
+  if (error) fail('/admin/promotions', 'Não foi possível confirmar o pagamento.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'confirm_promotion_payment',
+    entity: 'restaurant_promotion',
+    entityId: promotionId,
+  });
+
+  revalidatePath('/admin/promotions');
+  revalidatePath('/');
+}
+
 export async function togglePromotionStatus(formData: FormData) {
   const { profile, db } = await requireAdmin();
 

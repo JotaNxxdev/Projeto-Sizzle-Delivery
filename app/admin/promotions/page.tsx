@@ -1,7 +1,7 @@
 import { Megaphone } from 'lucide-react';
 import { listAllPromotions, listRestaurantsWithOwner } from '@/lib/admin-data';
 import { PROMOTION_PLANS } from '@/lib/promotions';
-import { createPromotionManual, togglePromotionStatus, deletePromotion } from '../actions';
+import { createPromotionManual, confirmPromotionPayment, togglePromotionStatus, deletePromotion } from '../actions';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -88,6 +88,17 @@ export default async function AdminPromotionsPage({
                   </Td>
                   <Td label="Ação">
                     <div className="table-action-group">
+                      {promo.status === 'pending_payment' && (
+                        <form action={confirmPromotionPayment}>
+                          <input type="hidden" name="promotionId" value={promo.id} />
+                          <ConfirmSubmitButton
+                            confirmMessage={`Confirmar que o pagamento (${formatCurrency(promo.price)}) de "${promo.title}" caiu? O destaque fica ativo a partir de agora.`}
+                            className="ui-button ui-button-primary ui-button-sm"
+                          >
+                            Confirmar pagamento
+                          </ConfirmSubmitButton>
+                        </form>
+                      )}
                       {promo.status === 'active' && (
                         <form action={togglePromotionStatus}>
                           <input type="hidden" name="promotionId" value={promo.id} />
