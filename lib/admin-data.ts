@@ -30,6 +30,24 @@ export interface ProfileRow {
   restaurantId: string | null;
 }
 
+export interface AdminPromotionRow {
+  id: string;
+  restaurantId: string;
+  restaurantName: string;
+  title: string;
+  imageUrl: string | null;
+  durationDays: number;
+  price: number;
+  paymentMethod: 'manual' | 'mercadopago';
+  status: 'pending_payment' | 'active' | 'paused' | 'cancelled';
+  startsAt: string | null;
+  expiresAt: string | null;
+  // Computado na leitura (mesmo padrão de "isOpenNow" em lib/restaurants.ts):
+  // status continua 'active' no banco até alguém mexer, isExpired é quem
+  // decide se ainda aparece na home.
+  isExpired: boolean;
+}
+
 export async function listRestaurantsWithOwner(): Promise<RestaurantWithOwner[]> {
   if (!supabase) return [];
 
@@ -71,6 +89,44 @@ export async function listRestaurantsWithOwner(): Promise<RestaurantWithOwner[]>
     ownerEmail: r.owner_id ? emailByOwnerId.get(r.owner_id) ?? null : null,
     isArchived: r.is_archived,
     orderCount: orderCountByRestaurant.get(r.id) ?? 0,
+  }));
+}
+
+export async function listAllPromotions(): Promise<AdminPromotionRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('restaurant_promotions')
+    .select('id, restaurant_id, title, image_url, duration_days, price, payment_method, status, starts_at, expires_at')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar destaques (admin):', error?.message);
+    return [];
+  }
+
+  const restaurantIds = [...new Set(data.map((row) => row.restaurant_id))];
+  let nameByRestaurantId = new Map<string, string>();
+  if (restaurantIds.length > 0) {
+    const { data: restaurants } = await supabase.from('restaurants').select('id, name').in('id', restaurantIds);
+    nameByRestaurantId = new Map((restaurants ?? []).map((r) => [r.id, r.name]));
+  }
+
+  const now = Date.now();
+
+  return data.map((row) => ({
+    id: row.id,
+    restaurantId: row.restaurant_id,
+    restaurantName: nameByRestaurantId.get(row.restaurant_id) ?? '—',
+    title: row.title,
+    imageUrl: row.image_url,
+    durationDays: row.duration_days,
+    price: Number(row.price),
+    paymentMethod: row.payment_method as 'manual' | 'mercadopago',
+    status: row.status as 'pending_payment' | 'active' | 'paused' | 'cancelled',
+    startsAt: row.starts_at,
+    expiresAt: row.expires_at,
+    isExpired: row.expires_at ? new Date(row.expires_at).getTime() < now : false,
   }));
 }
 

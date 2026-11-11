@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { MapPin, Search, Star, UtensilsCrossed, Pizza, Beef, Fish } from 'lucide-react';
 import type { Restaurant } from '@/lib/types';
+import type { ActivePromotion } from '@/lib/promotions';
 import { formatCurrency } from '@/lib/format';
 import FavoriteButton from '@/components/FavoriteButton';
 import EmptyState from '@/components/ui/EmptyState';
@@ -15,14 +16,14 @@ const CATEGORIES = [
   { id: 'brasileira', label: 'Brasileira', Icon: UtensilsCrossed },
 ];
 
-export default function HomeClient({ restaurants }: { restaurants: Restaurant[] }) {
+export default function HomeClient({ restaurants, promotions }: { restaurants: Restaurant[]; promotions: ActivePromotion[] }) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const carousel = carouselRef.current;
-    if (!carousel) return;
+    if (!carousel || promotions.length === 0) return;
 
     const scrollSpeed = 0.6;
     const intervalTime = 20;
@@ -35,7 +36,7 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
     }, intervalTime);
 
     return () => clearInterval(id);
-  }, []);
+  }, [promotions.length]);
 
   const filteredRestaurants = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -99,27 +100,19 @@ export default function HomeClient({ restaurants }: { restaurants: Restaurant[] 
           ))}
         </section>
 
-        <section className="highlight-section">
-          <h2>Destaques para você</h2>
-          <div className="highlight-carousel" ref={carouselRef}>
-            <div className="highlight-card">
-              <img src="/promocao.png" alt="Promoção: 2 hambúrgueres por R$ 35,00" />
-              <p className="highlight-text">2 Hambúrgueres por R$ 35,00!</p>
+        {promotions.length > 0 && (
+          <section className="highlight-section">
+            <h2>Destaques para você</h2>
+            <div className="highlight-carousel" ref={carouselRef}>
+              {promotions.map((promo) => (
+                <Link href={`/restaurants/${promo.restaurantId}`} className="highlight-card" key={promo.id}>
+                  {promo.imageUrl && <img src={promo.imageUrl} alt={promo.title} />}
+                  <p className="highlight-text">{promo.title}</p>
+                </Link>
+              ))}
             </div>
-            <div className="highlight-card">
-              <img src="/Entrega-Gratis.png" alt="Entrega grátis para pedidos acima de R$ 50" />
-              <p className="highlight-text">Entrega Grátis para pedidos acima de R$ 50!</p>
-            </div>
-            <div className="highlight-card">
-              <img src="/promocao.png" alt="Promoção: 2 hambúrgueres por R$ 35,00" />
-              <p className="highlight-text">2 Hambúrgueres por R$ 35,00!</p>
-            </div>
-            <div className="highlight-card">
-              <img src="/Entrega-Gratis.png" alt="Entrega grátis para pedidos acima de R$ 50" />
-              <p className="highlight-text">Entrega Grátis para pedidos acima de R$ 50!</p>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section className="restaurant-list">
           <h2>Restaurantes Próximos</h2>

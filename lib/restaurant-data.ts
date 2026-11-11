@@ -494,6 +494,49 @@ export async function getCouponsForRestaurant(restaurantId: string): Promise<Cou
   }));
 }
 
+export interface OwnerPromotionRow {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  durationDays: number;
+  price: number;
+  paymentMethod: 'manual' | 'mercadopago';
+  status: 'pending_payment' | 'active' | 'paused' | 'cancelled';
+  startsAt: string | null;
+  expiresAt: string | null;
+  isExpired: boolean;
+}
+
+export async function getPromotionsForRestaurant(restaurantId: string): Promise<OwnerPromotionRow[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('restaurant_promotions')
+    .select('id, title, image_url, duration_days, price, payment_method, status, starts_at, expires_at')
+    .eq('restaurant_id', restaurantId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('[Sizzle] Erro ao listar destaques do restaurante:', error?.message);
+    return [];
+  }
+
+  const now = Date.now();
+
+  return data.map((row) => ({
+    id: row.id,
+    title: row.title,
+    imageUrl: row.image_url,
+    durationDays: row.duration_days,
+    price: Number(row.price),
+    paymentMethod: row.payment_method as 'manual' | 'mercadopago',
+    status: row.status as 'pending_payment' | 'active' | 'paused' | 'cancelled',
+    startsAt: row.starts_at,
+    expiresAt: row.expires_at,
+    isExpired: row.expires_at ? new Date(row.expires_at).getTime() < now : false,
+  }));
+}
+
 export interface CustomerRow {
   userId: string;
   name: string;

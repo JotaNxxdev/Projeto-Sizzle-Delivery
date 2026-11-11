@@ -84,6 +84,79 @@ export async function getPaymentStatus(paymentId: string, accessToken: string | 
   return body?.status ?? null;
 }
 
+// --- Checkout Pro (conta da própria plataforma) ---------------------------
+//
+// Diferente do Pix acima (que usa o token de CADA restaurante, dinheiro cai
+// direto pra ele), isto aqui usa a conta do Mercado Pago da PRÓPRIA Sizzle —
+// é pra cobrar o restaurante por um serviço da plataforma (ex.: destaque
+// pago na home), não um pedido de cliente. O Checkout Pro é a página
+// hospedada do Mercado Pago: ela já aceita cartão, Pix e boleto sem a gente
+// precisar lidar com dado de cartão em momento nenhum.
+const platformAccessToken = process.env.MERCADOPAGO_PLATFORM_ACCESS_TOKEN;
+
+export const isMercadoPagoPlatformConfigured = Boolean(platformAccessToken);
+
+export interface CheckoutPreferenceResult {
+  preferenceId: string;
+  initPoint: string;
+}
+
+export async function createCheckoutPreference(params: {
+  title: string;
+  price: number;
+  externalReference: string;
+  notificationUrl: string;
+  successUrl: string;
+  failureUrl: string;
+}): Promise<CheckoutPreferenceResult> {
+  if (!platformAccessToken) {
+    throw new Error('Pagamento por cartão não configurado (falta MERCADOPAGO_PLATFORM_ACCESS_TOKEN).');
+  }
+
+  const response = await fetch(`${BASE_URL}/checkout/preferences`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${platformAccessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      items: [{ title: params.title, quantity: 1, unit_price: Math.round(params.price * 100) / 100, currency_id: 'BRL' }],
+      external_reference: params.externalReference,
+      notification_url: params.notificationUrl,
+      back_urls: { success: params.successUrl, failure: params.failureUrl, pending: params.successUrl },
+      auto_return: 'approved',
+    }),
+  });
+
+  const body = await response.json().catch(() => null);
+
+  if (!response.ok || !body?.id || !body?.init_point) {
+    console.error('[Sizzle] Erro ao criar preferência de checkout no Mercado Pago:', body);
+    throw new Error(body?.message || 'Não foi possível iniciar o pagamento.');
+  }
+
+  return { preferenceId: String(body.id), initPoint: body.init_point };
+}
+
+export interface PlatformPaymentInfo {
+  status: string;
+  externalReference: string | null;
+}
+
+// Consulta um pagamento feito na conta da plataforma (Checkout Pro acima) —
+// usa platformAccessToken, nunca o token de um restaurante.
+export async function getPlatformPayment(paymentId: string): Promise<PlatformPaymentInfo | null> {
+  if (!platformAccessToken) return null;
+
+  const response = await fetch(`${BASE_URL}/v1/payments/${paymentId}`, {
+    headers: { Authorization: `Bearer ${platformAccessToken}` },
+  });
+
+  if (!response.ok) return null;
+
+  const body = await response.json().catch(() => null);
+  if (!body) return null;
+
+  return { status: body.status, externalReference: body.external_reference ?? null };
+}
+
 // --- Mercado Pago Connect (OAuth) -----------------------------------------
 
 export function getMercadoPagoConnectUrl(params: { state: string; redirectUri: string }): string {

@@ -299,3 +299,102 @@ export async function updateUserRole(formData: FormData) {
   revalidatePath('/admin/users');
   revalidatePath('/admin/restaurants');
 }
+
+// Cria um destaque pago manualmente — pro caso de o dono ter combinado e
+// pago por fora (ex. Pix direto com a equipe), sem passar pelo Checkout Pro.
+// Já nasce 'active', diferente do fluxo via Mercado Pago (que nasce
+// 'pending_payment' e só vira 'active' quando o webhook confirma o pagamento).
+export async function createPromotionManual(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const restaurantId = String(formData.get('restaurantId') || '');
+  const title = String(formData.get('title') || '').trim();
+  const imageUrl = String(formData.get('imageUrl') || '').trim() || null;
+  const days = Number(formData.get('days') || 0);
+  const price = Number(formData.get('price') || 0);
+
+  if (!restaurantId || !title || !(days > 0)) {
+    fail('/admin/promotions', 'Restaurante, texto do banner e duração são obrigatórios.');
+  }
+  if (imageUrl && !isValidImageUrl(imageUrl)) {
+    fail('/admin/promotions', 'URL da imagem inválida.');
+  }
+
+  const startsAt = new Date();
+  const expiresAt = new Date(startsAt.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const { error } = await db.from('restaurant_promotions').insert({
+    restaurant_id: restaurantId,
+    title,
+    image_url: imageUrl,
+    duration_days: days,
+    price: Number.isFinite(price) ? price : 0,
+    payment_method: 'manual',
+    status: 'active',
+    starts_at: startsAt.toISOString(),
+    expires_at: expiresAt.toISOString(),
+  });
+
+  if (error) {
+    console.error('[Sizzle] Erro ao criar destaque manual:', error.message);
+    fail('/admin/promotions', 'Não foi possível criar o destaque.');
+  }
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'create_promotion',
+    entity: 'restaurant_promotion',
+    entityId: null,
+    newValue: { restaurantId, title, days },
+  });
+
+  revalidatePath('/admin/promotions');
+  revalidatePath('/');
+}
+
+export async function togglePromotionStatus(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const promotionId = String(formData.get('promotionId') || '');
+  const nextStatus = String(formData.get('nextStatus') || '');
+  if (!promotionId || !['active', 'paused'].includes(nextStatus)) {
+    fail('/admin/promotions', 'Destaque e status são obrigatórios.');
+  }
+
+  const { error } = await db.from('restaurant_promotions').update({ status: nextStatus }).eq('id', promotionId);
+  if (error) fail('/admin/promotions', 'Não foi possível atualizar o destaque.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'update_status',
+    entity: 'restaurant_promotion',
+    entityId: promotionId,
+    newValue: { status: nextStatus },
+  });
+
+  revalidatePath('/admin/promotions');
+  revalidatePath('/');
+}
+
+export async function deletePromotion(formData: FormData) {
+  const { profile, db } = await requireAdmin();
+
+  const promotionId = String(formData.get('promotionId') || '');
+  if (!promotionId) fail('/admin/promotions', 'Destaque é obrigatório.');
+
+  const { error } = await db.from('restaurant_promotions').delete().eq('id', promotionId);
+  if (error) fail('/admin/promotions', 'Não foi possível excluir o destaque.');
+
+  await logAudit(db, {
+    userId: profile.id,
+    userEmail: profile.email,
+    action: 'delete_promotion',
+    entity: 'restaurant_promotion',
+    entityId: promotionId,
+  });
+
+  revalidatePath('/admin/promotions');
+  revalidatePath('/');
+}

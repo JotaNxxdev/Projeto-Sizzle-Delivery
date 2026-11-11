@@ -1,4 +1,5 @@
 import { getRestaurants } from '@/lib/restaurants';
+import { listActivePromotions } from '@/lib/promotions';
 import HomeClient from './HomeClient';
 
 // Cacheia por 60s em vez de refazer tudo (imagens inclusive) em toda
@@ -8,6 +9,6 @@ import HomeClient from './HomeClient';
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const restaurants = await getRestaurants();
-  return <HomeClient restaurants={restaurants} />;
+  const [restaurants, promotions] = await Promise.all([getRestaurants(), listActivePromotions()]);
+  return <HomeClient restaurants={restaurants} promotions={promotions} />;
 }
